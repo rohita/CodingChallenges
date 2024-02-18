@@ -1,5 +1,6 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
+// 
+// https://codingchallenges.substack.com/p/coding-challenge-27-rate-limiter
+//
 
 import Foundation
 
