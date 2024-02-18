@@ -3,24 +3,30 @@ import Foundation
 /// 
 /// A file stream which reads and returns one unicode char at a time
 ///
-struct CharacterStream: Sequence, IteratorProtocol {
+class CharacterStream: Sequence, IteratorProtocol {
     private let fileHandle: FileHandle
     private let encoding: String.Encoding
     private let bofOffset: UInt64
     private let eofOffset: UInt64
     
+    private var buffer: Data = Data()
+    private var bufferOffset: Int = 0
+    private var numBufferFills: Int = 0
+    private let bufferSize = 1000 // 1kb 
+    
+    
     var byteCount: Int {
         Int(eofOffset)
     }
     
-    init(contentsOfFile filePath: String) throws {
+    convenience init(contentsOfFile filePath: String) throws {
         guard let fileHandle = FileHandle(forReadingAtPath: filePath) else {
             throw CharacterStreamError.fileNotFound(filePath: filePath)
         }
         try self.init(fileHandle: fileHandle)
     }
     
-    init(fileHandle: FileHandle) throws {
+    convenience init(fileHandle: FileHandle) throws {
         // https://github.com/joseph-elmallah/swift-bom/blob/main/Sources/BOM/BOM.swift
         try fileHandle.seek(toOffset: 0)
         let BOM = try fileHandle.read(upToCount: 4)!
@@ -60,9 +66,13 @@ struct CharacterStream: Sequence, IteratorProtocol {
         try fileHandle.seek(toOffset: bofOffset)
     }
     
-    mutating func next() -> Character? {
+    deinit {
+        close()
+    }
+    
+    func next() -> Character? {
         do {
-            guard let char = try getChar() else {
+            guard let char = try getCharBufferred() else {
                 return nil
             }
             return Character(char)
@@ -72,9 +82,17 @@ struct CharacterStream: Sequence, IteratorProtocol {
         }
     }
     
+    func close() {
+        do {
+            try fileHandle.close()
+        } catch {
+            print("Error closing stream: \(error)")
+        }
+    }
+    
     // function reads one or more bytes at each call and returns it as a unicode character string
-    // Inspired from: https://stackoverflow.com/a/73632420
-    private func getChar() throws -> String? {
+    // Slow method
+    private func getCharFile() throws -> String? {
         if try eofTest() {
             return nil
         }
@@ -88,9 +106,55 @@ struct CharacterStream: Sequence, IteratorProtocol {
         return String(data: ch, encoding: .utf8)
     }
     
+    // function reads one or more bytes at each call and returns it as a unicode character string
+    private func getCharBufferred() throws -> String? {
+        if isEndOfStream() {
+            return nil
+        }
+        
+        var ch = try readFromBuffer(upToCount: 1)
+        let bytes = utf8Bytes(ch[0])   // TODO: change to handle other encodings
+        if bytes > 1 {
+            ch.append(try readFromBuffer(upToCount: bytes-1))
+        }
+        
+        return String(data: ch, encoding: .utf8)
+    }
+    
+    private func isEndOfStream() -> Bool {
+        let current = ((numBufferFills-1) * bufferSize) + bufferOffset + Int(bofOffset)
+        return current >= eofOffset
+    }
+    
     private func eofTest() throws -> Bool {
         let current = try fileHandle.offset()
         return current >= eofOffset
+    }
+    
+    private func readFromBuffer(upToCount: Int) throws -> Data {
+        if bufferOffset == buffer.count {
+            try fillBuffer()
+        }
+        
+        let endRange = bufferOffset + upToCount > bufferSize ? bufferSize : bufferOffset + upToCount
+        var returnVal = Data(buffer[bufferOffset..<endRange]) // We don't want slice, we want a copy.
+        bufferOffset += returnVal.count // buffer can have less than 'upToCount'
+        
+        if returnVal.count < upToCount {
+            try fillBuffer()
+            let remainingCount = upToCount - returnVal.count
+            let remainingBytes = buffer[bufferOffset..<remainingCount]
+            bufferOffset += remainingBytes.count
+            returnVal.append(remainingBytes)
+        }
+        
+        return returnVal
+    }
+    
+    private func fillBuffer() throws {
+        buffer = try fileHandle.read(upToCount: bufferSize)!
+        bufferOffset = 0
+        numBufferFills += 1
     }
     
     // If the first bit of the byte is 0, it is a 7-bit ASCII character; U+0000 to U+007F.
