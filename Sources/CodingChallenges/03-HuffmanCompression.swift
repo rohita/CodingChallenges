@@ -8,40 +8,66 @@
 import Foundation
 
 struct HuffmanEncoder {
+    
     public static func encodeFile(inputFilePath: String, outputFilePath: String) throws {
-        let charStream = try CharacterStreamReader(contentsOfFile: inputFilePath)
-        let frequencies = try charStream.charFrequencies()
-        let huffTree = Tree.buildHuffTree(frequencies: frequencies)
-        let prefixCodes = huffTree.generatePrefixCodeTable()
-        let header = Self.buildHeader(characterCodes: prefixCodes, frequencies: frequencies)
-        
+        let charReader = try CharacterStreamReader(contentsOfFile: inputFilePath)
         let byteWriter = try CharacterStreamWriter(forWritingAtPath: outputFilePath)
-        try header.map{ $0.asciiValue! }.forEach{ try byteWriter.writeByte($0)}
         
-        var runningString = ""
-        for ch in charStream {
-            runningString.append(prefixCodes[ch]!)
-            if runningString.count >= 8 {
-                let byteString = String(runningString.prefix(8))
-                runningString = String(runningString.dropFirst(8))
-                let byte = UInt8(byteString, radix: 2)!
-                try byteWriter.writeByte(byte)
-            }
-        }
+        let frequencies = try charReader.charFrequencies()
+        let huffTree = Tree.buildHuffTree(frequencies: frequencies)
+        let charCodes = huffTree.generatePrefixCodeTable()
+        let header = Header(characterCodes: charCodes, frequencies: frequencies)
         
-        if runningString.count < 8 {
-            runningString += String(repeating: "0", count: 8-runningString.count)
-            try byteWriter.writeByte(UInt8(runningString, radix: 2)!)
-        }
+        try header.write(to: byteWriter)
+        try charReader.encodeAndWrite(using: header, writeTo: byteWriter)
         
-        print("input bytes:\(charStream.byteCount), output bytes:\(try byteWriter.byteCount)")
-        
+        print("input bytes:\(charReader.byteCount), output bytes:\(try byteWriter.byteCount)")
     }
     
-    static func buildHeader(characterCodes: [Character: String], frequencies: [Character: Int]) -> String {
-        characterCodes.sorted { frequencies[$0.key]! > frequencies[$1.key]! }.map{ "\($0.key.unicodeScalars.first!.value)-\($0.value)" }.joined(separator: ";") + "!"
+    struct Header {
+        private static let separator = ";"
+        private static let endChar = "!"
+        private var frequencies: [Character: Int] = [:]
+        private var characterCodes: [Character: String] = [:]
+        private var codeCharacters: [String: Character] = [:]
+        
+        subscript(key: Character) -> String? { characterCodes[key] }
+        subscript(key: String) -> Character? { codeCharacters[key] }
+        
+        init(characterCodes: [Character: String], frequencies: [Character: Int]) {
+            self.frequencies = frequencies
+            self.characterCodes = characterCodes
+            self.codeCharacters = Dictionary(uniqueKeysWithValues: characterCodes.map{($1,$0)})
+        }
+        
+        func buildHeader() -> String {
+            characterCodes
+                .sorted { frequencies[$0.key]! > frequencies[$1.key]! }
+                .map{ "\($0.key.unicodeScalars.first!.value)-\($0.value)" }
+                .joined(separator: Header.separator) + Header.endChar
+        }
+        
+        func write(to byteWriter: CharacterStreamWriter) throws {
+            try buildHeader().utf8.forEach{ try byteWriter.write(byte: $0)}
+        }
     }
 }
+
+extension HuffmanEncoder.Header: CustomDebugStringConvertible {
+    var debugDescription: String {
+        if (frequencies.count > 0) {
+            return characterCodes
+                .sorted { frequencies[$0.key]! > frequencies[$1.key]! }
+                .map { "\($0.key): freq: \(frequencies[$0.key]!), code: \($0.value)" }
+                .joined(separator: "\n")
+        } else {
+            return characterCodes
+                .map { "\($0.key): code: \($0.value)" }
+                .joined(separator: "\n")
+        }
+    }
+}
+
 
 extension Tree {
     static func buildHuffTree(frequencies: [Character: Int]) -> Tree {
@@ -90,5 +116,20 @@ extension CharacterStreamReader {
             frequencyTable[ch, default: 0] += 1
         }
         return frequencyTable
+    }
+    
+    fileprivate func encodeAndWrite(using header: HuffmanEncoder.Header, writeTo byteWriter: CharacterStreamWriter) throws {
+        var byteString = ""
+        for ch in self {
+            byteString.append(header[ch]!)
+            if byteString.count >= 8 {
+                try byteWriter.write(byteString: byteString.popFirst(8))
+            }
+        }
+        
+        if byteString.count < 8 {
+            byteString += String(repeating: "0", count: 8-byteString.count)
+            try byteWriter.write(byteString: byteString)
+        }
     }
 }

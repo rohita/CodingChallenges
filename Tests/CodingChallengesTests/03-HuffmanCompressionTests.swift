@@ -4,8 +4,7 @@ import XCTest
 final class HuffmanTests: XCTestCase {
     let inputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables.txt"
     let outputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_compressed.txt"
-    //let inputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/art_of_war.txt"
-    let frequencies: [Character: Int] = ["C": 32, "D": 42, "E": 120, "K": 7, "L": 43, "M": 24, "U": 37, "Z": 2]
+    let testFrequencies: [Character: Int] = ["C": 32, "D": 42, "E": 120, "K": 7, "L": 43, "M": 24, "U": 37, "Z": 2]
     
     func testFrequency() throws {
         let charStream = try CharacterStreamReader(contentsOfFile: inputFilePath)
@@ -19,12 +18,12 @@ final class HuffmanTests: XCTestCase {
     }
     
     func testBuildTree() throws {
-        let tree = Tree.buildHuffTree(frequencies: frequencies)
+        let tree = Tree.buildHuffTree(frequencies: testFrequencies)
         XCTAssertEqual(tree.weight, 307)
     }
     
     func testPrefixCode() throws {
-        let tree = Tree.buildHuffTree(frequencies: frequencies)
+        let tree = Tree.buildHuffTree(frequencies: testFrequencies)
         let prefixCodes = tree.generatePrefixCodeTable()
         XCTAssertEqual(prefixCodes["E"], "0")
         XCTAssertEqual(prefixCodes["U"], "100")
@@ -37,10 +36,12 @@ final class HuffmanTests: XCTestCase {
     }
     
     func testHeader() throws {
-        let tree = Tree.buildHuffTree(frequencies: frequencies)
+        let tree = Tree.buildHuffTree(frequencies: testFrequencies)
         let prefixCodes = tree.generatePrefixCodeTable()
-        let header = HuffmanEncoder.buildHeader(characterCodes: prefixCodes, frequencies: frequencies)
+        var header = HuffmanEncoder.Header(characterCodes: prefixCodes, frequencies: testFrequencies)
         let expected = "69-0;76-110;68-101;85-100;67-1110;77-11111;75-111101;90-111100!"
-        XCTAssertEqual(header, expected)
+        XCTAssertEqual(header.buildHeader(), expected)
+        XCTAssertEqual(header[Character("U")]!, "100")
+        XCTAssertEqual(header["111100"]!, "Z")
     }
 }

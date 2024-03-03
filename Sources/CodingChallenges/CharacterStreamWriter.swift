@@ -27,8 +27,12 @@ class CharacterStreamWriter {
         }
     }
     
-    func writeByte(_ byte: UInt8) throws {
+    func write(byte: UInt8) throws {
         try fileWriter.write(contentsOf: [byte])
+    }
+    
+    func write(byteString: String) throws {
+        try write(byte: UInt8(byteString, radix: 2)!)
     }
     
     enum CharacterStreamWriter: Error {
