@@ -3,8 +3,8 @@ import Foundation
 /// 
 /// A file stream which reads and returns one unicode char at a time
 ///
-class CharacterStream: Sequence, IteratorProtocol {
-    private let fileHandle: FileHandle
+class CharacterStreamReader: Sequence, IteratorProtocol {
+    private let fileReader: FileHandle
     private let encoding: String.Encoding
     private let bofOffset: UInt64
     private let eofOffset: UInt64
@@ -57,22 +57,26 @@ class CharacterStream: Sequence, IteratorProtocol {
         try self.init(fileHandle: fileHandle, encoding: encoding, bofOffset: bomLength, eofOffset: eofOffset)
     }
     
-    init(fileHandle: FileHandle, encoding: String.Encoding, bofOffset: UInt64, eofOffset: UInt64) throws {
-        self.fileHandle = fileHandle
+    private init(fileHandle: FileHandle, encoding: String.Encoding, bofOffset: UInt64, eofOffset: UInt64) throws {
+        self.fileReader = fileHandle
         self.encoding = encoding
         self.bofOffset = bofOffset
         self.eofOffset = eofOffset
-        
         try fileHandle.seek(toOffset: bofOffset)
     }
     
     deinit {
-        close()
+        do {
+            try fileReader.close()
+        } catch {
+            print("Error closing stream: \(error)")
+        }
     }
     
     func next() -> Character? {
         do {
             guard let char = try getCharBufferred() else {
+                try reset()
                 return nil
             }
             return Character(char)
@@ -82,28 +86,11 @@ class CharacterStream: Sequence, IteratorProtocol {
         }
     }
     
-    func close() {
-        do {
-            try fileHandle.close()
-        } catch {
-            print("Error closing stream: \(error)")
-        }
-    }
-    
-    // function reads one or more bytes at each call and returns it as a unicode character string
-    // Slow method
-    private func getCharFile() throws -> String? {
-        if try eofTest() {
-            return nil
-        }
-        
-        var ch = try fileHandle.read(upToCount: 1)!
-        let bytes = utf8Bytes(ch[0])   // TODO: change to handle other encodings
-        if bytes > 1 {
-            ch.append(try fileHandle.read(upToCount: bytes-1)!)
-        }
-        
-        return String(data: ch, encoding: .utf8)
+    private func reset() throws {
+        try fileReader.seek(toOffset: bofOffset)
+        buffer = Data()
+        bufferOffset = 0
+        numBufferFills = 0
     }
     
     // function reads one or more bytes at each call and returns it as a unicode character string
@@ -123,11 +110,6 @@ class CharacterStream: Sequence, IteratorProtocol {
     
     private func isEndOfStream() -> Bool {
         let current = ((numBufferFills-1) * bufferSize) + bufferOffset + Int(bofOffset)
-        return current >= eofOffset
-    }
-    
-    private func eofTest() throws -> Bool {
-        let current = try fileHandle.offset()
         return current >= eofOffset
     }
     
@@ -152,7 +134,7 @@ class CharacterStream: Sequence, IteratorProtocol {
     }
     
     private func fillBuffer() throws {
-        buffer = try fileHandle.read(upToCount: bufferSize)!
+        buffer = try fileReader.read(upToCount: bufferSize)!
         bufferOffset = 0
         numBufferFills += 1
     }

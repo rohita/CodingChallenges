@@ -33,8 +33,7 @@ class WordCounter_InMemory {
 struct WordCounter_FileStream {
     
     static func numberOfLines(_ filePath: String) throws -> Int {
-        let charStream = try CharacterStream(contentsOfFile: filePath)
-        defer { charStream.close() }
+        let charStream = try CharacterStreamReader(contentsOfFile: filePath)
         var lines = 0
         for ch in charStream {
             if ch.isLineSeparator {
@@ -45,14 +44,12 @@ struct WordCounter_FileStream {
     }
     
     static func numberOfBytes(_ filePath: String) throws -> Int  {
-        let charStream = try CharacterStream(contentsOfFile: filePath)
-        defer { charStream.close() }
+        let charStream = try CharacterStreamReader(contentsOfFile: filePath)
         return charStream.byteCount
     }
     
     static func numberOfCharacters(_ filePath: String) throws -> Int  {
-        let charStream = try CharacterStream(contentsOfFile: filePath)
-        defer { charStream.close() }
+        let charStream = try CharacterStreamReader(contentsOfFile: filePath)
         var chars = 1
         for _ in charStream {
             chars += 1
@@ -61,8 +58,7 @@ struct WordCounter_FileStream {
     }
     
     static func numberOfWords(_ filePath: String) throws -> Int {
-        let charStream = try CharacterStream(contentsOfFile: filePath)
-        defer { charStream.close() }
+        let charStream = try CharacterStreamReader(contentsOfFile: filePath)
         var words = 0
         var previousCh = Character(" ")
         for ch in charStream {

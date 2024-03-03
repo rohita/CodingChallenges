@@ -4,67 +4,57 @@
 /// ## References
 /// https://opendsa-server.cs.vt.edu/ODSA/Books/CS3/html/Huffman.html
 /// https://github.com/Patrick-Q-Jensen/HuffmanEncoding/tree/master
-//CommandLineArgumentParser.cs
-//CommandLineArguments.cs
-//Encoder.cs
-//PrefixCodeGenerator.cs
-//Program.cs
 
 import Foundation
 
-protocol HuffBaseNode {
-    var isLeaf: Bool { get }
-    var weight: Int { get }
-}
-
-struct HuffLeafNode: HuffBaseNode {
-    let value: Character
-    let weight: Int
-    var isLeaf: Bool = true
-}
-
-struct HuffInternalNode: HuffBaseNode {
-    let left: HuffBaseNode
-    let right: HuffBaseNode
-    let weight: Int
-    var isLeaf: Bool = false
-}
-
-struct HuffTree: Comparable {
-    let root: HuffBaseNode
-    var weight: Int {
-        root.weight
+struct HuffmanEncoder {
+    public static func encodeFile(inputFilePath: String, outputFilePath: String) throws {
+        let charStream = try CharacterStreamReader(contentsOfFile: inputFilePath)
+        let frequencies = try charStream.charFrequencies()
+        let huffTree = Tree.buildHuffTree(frequencies: frequencies)
+        let prefixCodes = huffTree.generatePrefixCodeTable()
+        let header = Self.buildHeader(characterCodes: prefixCodes, frequencies: frequencies)
+        
+        let byteWriter = try CharacterStreamWriter(forWritingAtPath: outputFilePath)
+        try header.map{ $0.asciiValue! }.forEach{ try byteWriter.writeByte($0)}
+        
+        var runningString = ""
+        for ch in charStream {
+            runningString.append(prefixCodes[ch]!)
+            if runningString.count >= 8 {
+                let byteString = String(runningString.prefix(8))
+                runningString = String(runningString.dropFirst(8))
+                let byte = UInt8(byteString, radix: 2)!
+                try byteWriter.writeByte(byte)
+            }
+        }
+        
+        if runningString.count < 8 {
+            runningString += String(repeating: "0", count: 8-runningString.count)
+            try byteWriter.writeByte(UInt8(runningString, radix: 2)!)
+        }
+        
+        print("input bytes:\(charStream.byteCount), output bytes:\(try byteWriter.byteCount)")
+        
     }
     
-    init(element: Character, weight: Int) {
-        root = HuffLeafNode(value: element, weight: weight)
-    }
-    
-    init(left: HuffBaseNode, right: HuffBaseNode, weight: Int) {
-        root = HuffInternalNode(left: left, right: right, weight: weight)
-    }
-
-    static func < (lhs: HuffTree, rhs: HuffTree) -> Bool {
-        return lhs.weight < rhs.weight
-    }
-
-    static func == (lhs: HuffTree, rhs: HuffTree) -> Bool {
-        return lhs.weight == rhs.weight
+    static func buildHeader(characterCodes: [Character: String], frequencies: [Character: Int]) -> String {
+        characterCodes.sorted { frequencies[$0.key]! > frequencies[$1.key]! }.map{ "\($0.key.unicodeScalars.first!.value)-\($0.value)" }.joined(separator: ";") + "!"
     }
 }
 
-extension HuffTree {
-    static func buildTree(frequencies: [Character: Int]) -> HuffTree {
-        var priorityQueue = [HuffTree]()
+extension Tree {
+    static func buildHuffTree(frequencies: [Character: Int]) -> Tree {
+        var priorityQueue = [Tree]()
         for item in frequencies {
-            priorityQueue.append(HuffTree(element: item.key, weight: item.value))
+            priorityQueue.append(Tree(element: item.key, weight: item.value))
         }
 
         while (priorityQueue.count > 1) {
             priorityQueue.sort()
             let leftTree = priorityQueue.removeFirst()
             let rightTree = priorityQueue.removeFirst()
-            let huffTree = HuffTree(left: leftTree.root, right: rightTree.root, weight: leftTree.weight + rightTree.weight)
+            let huffTree = Tree(left: leftTree.root, right: rightTree.root, weight: leftTree.weight + rightTree.weight)
             priorityQueue.append(huffTree)
         }
         
@@ -73,25 +63,28 @@ extension HuffTree {
     
     func generatePrefixCodeTable() -> [Character: String] {
         var characterCodes = [Character: String]()
-        traverse(code: "", node: self.root, characterCodes: &characterCodes)
-        return characterCodes
-    }
-    
-    private func traverse(code: String, node: HuffBaseNode, characterCodes: inout [Character: String]) {
-        if node.isLeaf {
-            characterCodes[(node as! HuffLeafNode).value] = code
-            return
+        var queue: [(Node, String)] = [(self.root, "")]
+        
+        while (!queue.isEmpty) {
+            let (node, code) = queue.removeFirst()
+            
+            if node.isLeaf {
+                characterCodes[(node as! LeafNode).value] = code
+                continue
+            }
+            
+            let internalNode = node as! InternalNode
+            queue.append((internalNode.left, code + "0"))
+            queue.append((internalNode.right, code + "1"))
         }
         
-        let internalNode = node as! HuffInternalNode
-        traverse(code: code + "0", node: internalNode.left, characterCodes: &characterCodes)
-        traverse(code: code + "1", node: internalNode.right, characterCodes: &characterCodes)
+        return characterCodes
     }
 }
 
 
-extension CharacterStream {
-    func wordFrequencies() throws -> [Character: Int] {
+extension CharacterStreamReader {
+    func charFrequencies() throws -> [Character: Int] {
         var frequencyTable: [Character: Int] = [:]
         for ch in self {
             frequencyTable[ch, default: 0] += 1
