@@ -7,6 +7,14 @@ extension String {
         self.removeFirst(k)
         return byteString
     }
+    
+    func padLeft(toLength: Int, withPad character: Character) -> String {
+        return String(repeatElement(character, count: toLength - self.count)) + self
+    }
+    
+    func padRight(toLength: Int, withPad character: Character) -> String {
+        return self + String(repeating: "0", count: toLength - self.count)
+    }
 }
 
 extension Collection where Index: BinaryInteger {

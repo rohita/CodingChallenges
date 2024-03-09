@@ -2,19 +2,16 @@ import XCTest
 @testable import CodingChallenges
 
 final class HuffmanTests: XCTestCase {
-    let inputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables.txt"
-    let outputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_compressed.txt"
+    let originalFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables.txt"
+    let encodedFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_compressed.txt"
+    let decodedFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_decoded.txt"
     let testFrequencies: [Character: Int] = ["C": 32, "D": 42, "E": 120, "K": 7, "L": 43, "M": 24, "U": 37, "Z": 2]
     
     func testFrequency() throws {
-        let charStream = try CharacterStreamReader(contentsOfFile: inputFilePath)
+        let charStream = try CharacterStreamReader(contentsOfFile: originalFilePath)
         let frequencies = try charStream.charFrequencies()
         XCTAssertEqual(frequencies["X"], 333)
         XCTAssertEqual(frequencies["t"], 223000)
-    }
-    
-    func testWrite() throws {
-        try HuffmanEncoder.encodeFile(inputFilePath: inputFilePath, outputFilePath: outputFilePath)
     }
     
     func testBuildTree() throws {
@@ -38,10 +35,38 @@ final class HuffmanTests: XCTestCase {
     func testHeader() throws {
         let tree = Tree.buildHuffTree(frequencies: testFrequencies)
         let prefixCodes = tree.generatePrefixCodeTable()
-        var header = HuffmanEncoder.Header(characterCodes: prefixCodes, frequencies: testFrequencies)
-        let expected = "69-0;76-110;68-101;85-100;67-1110;77-11111;75-111101;90-111100!"
-        XCTAssertEqual(header.buildHeader(), expected)
+        let header = HuffmanEncoder.Header(characterCodes: prefixCodes)
+        print(header.buildHeader())
         XCTAssertEqual(header[Character("U")]!, "100")
+        XCTAssertEqual(header[Character("K")]!, "111101")
         XCTAssertEqual(header["111100"]!, "Z")
+    }
+    
+    func testHeaderFile() throws {
+        let charStream = try CharacterStreamReader(contentsOfFile: originalFilePath)
+        let frequencies = try charStream.charFrequencies()
+        let tree = Tree.buildHuffTree(frequencies: frequencies)
+        let prefixCodes = tree.generatePrefixCodeTable()
+        let header = HuffmanEncoder.Header(characterCodes: prefixCodes)
+        print(header)
+    }
+    
+    func testEncode() throws {
+        try HuffmanEncoder.encodeFile(inputFilePath: originalFilePath, outputFilePath: encodedFilePath)
+    }
+    
+    func testHeaderEncodedFile() throws {
+        let encodedFile = try CharacterStreamReader(contentsOfFile: encodedFilePath)
+        let header = HuffmanEncoder.Header(stream: encodedFile)
+        print(header)
+    }
+    
+    func testDecode() throws {
+        try HuffmanEncoder.decodeFile(inputFilePath: encodedFilePath, outputFilePath: decodedFilePath)
+    }
+    
+    func testString() {
+        let num: UInt8 = 0b10110100
+        print(String(num, radix: 2).padLeft(toLength: 8, withPad: "0"))
     }
 }

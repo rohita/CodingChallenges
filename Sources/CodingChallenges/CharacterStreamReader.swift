@@ -14,6 +14,9 @@ class CharacterStreamReader: Sequence, IteratorProtocol {
     private var numBufferFills: Int = 0
     private let bufferSize = 1000 // 1kb 
     
+    var currentOffset: Int {
+        ((numBufferFills-1) * bufferSize) + bufferOffset + Int(bofOffset)
+    }
     
     var byteCount: Int {
         Int(eofOffset)
@@ -86,6 +89,21 @@ class CharacterStreamReader: Sequence, IteratorProtocol {
         }
     }
     
+    func nextByte() -> UInt8? {
+        do {
+            if isEndOfStream() {
+                try reset()
+                return nil
+            }
+        
+            let ch = try readFromBuffer(upToCount: 1)
+            return ch.first
+        } catch {
+            print("Error reading byte: \(error)")
+            return nil
+        }
+    }
+    
     private func reset() throws {
         try fileReader.seek(toOffset: bofOffset)
         buffer = Data()
@@ -109,8 +127,7 @@ class CharacterStreamReader: Sequence, IteratorProtocol {
     }
     
     private func isEndOfStream() -> Bool {
-        let current = ((numBufferFills-1) * bufferSize) + bufferOffset + Int(bofOffset)
-        return current >= eofOffset
+        return currentOffset >= eofOffset
     }
     
     private func readFromBuffer(upToCount: Int) throws -> Data {
