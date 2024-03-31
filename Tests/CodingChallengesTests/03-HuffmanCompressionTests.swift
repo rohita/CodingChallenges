@@ -2,9 +2,9 @@ import XCTest
 @testable import CodingChallenges
 
 final class HuffmanTests: XCTestCase {
-    let originalFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables.txt"
-    let encodedFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_compressed.txt"
-    let decodedFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables_decoded.txt"
+    let originalFilePath = TestDataDirectory + "les_miserables.txt"
+    let encodedFilePath = TestDataDirectory + "les_miserables_compressed.txt"
+    let decodedFilePath = TestDataDirectory + "les_miserables_decoded.txt"
     let testFrequencies: [Character: Int] = ["C": 32, "D": 42, "E": 120, "K": 7, "L": 43, "M": 24, "U": 37, "Z": 2]
     
     func testFrequency() throws {

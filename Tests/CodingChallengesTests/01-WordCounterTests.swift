@@ -1,9 +1,11 @@
 import XCTest
 @testable import CodingChallenges
 
+let TestDataDirectory: String =  NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/TestData/"
+
 final class WordCounterTests: XCTestCase {
-    let inputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/art_of_war.txt"
-    //let inputFilePath = NSHomeDirectory() + "/Documents/Projects/CodingChallenges/Tests/CodingChallengesTests/les_miserables.txt"
+    let inputFilePath = TestDataDirectory + "art_of_war.txt"
+    //let inputFilePath = TestDataDirectory + "les_miserables.txt"
     
     func testLineCounter() throws {
         XCTAssertEqual(WordCounter_InMemory.numberOfLines(inputFilePath), 7145)
