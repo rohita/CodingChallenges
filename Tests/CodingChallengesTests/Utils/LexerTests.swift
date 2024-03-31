@@ -2,7 +2,7 @@ import XCTest
 @testable import CodingChallenges
 
 final class LexerTests: XCTestCase {
-    func testFrequency() throws {
+    func testCalcLexer() throws {
         let charStream = "def foo(x, y) x + y * 2"
         let lexer = CalcLexer()
         let result = lexer.tokenize(charStream)
@@ -21,17 +21,15 @@ class CalcLexer: Lexer {
         case Other(String)
     }
     
-    let tokenList: [(String, (String) -> Token?)] = [
-        ("[ \t\n]", { _ in nil }),
-        ("[a-zA-Z][a-zA-Z0-9]*", { $0 == "def" ? .Define : .Identifier($0) }),
-        ("[0-9.]+", { (r: String) in .Number((r as NSString).floatValue) }),
-        ("\\(", { _ in .ParensOpen }),
-        ("\\)", { _ in .ParensClose }),
-        (",", { _ in .Comma }),
-    ]
-    
     var tokenRules: [(String, (String) -> Token?)] {
-        return tokenList
+        [
+            ("[ \t\n]", { _ in nil }),
+            ("[a-zA-Z][a-zA-Z0-9]*", { $0 == "def" ? .Define : .Identifier($0) }),
+            ("[0-9.]+", { (r: String) in .Number((r as NSString).floatValue) }),
+            ("\\(", { _ in .ParensOpen }),
+            ("\\)", { _ in .ParensClose }),
+            (",", { _ in .Comma }),
+        ]
     }
     
     func literal(_ c: String) -> Token {
