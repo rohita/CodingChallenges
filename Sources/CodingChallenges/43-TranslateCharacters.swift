@@ -4,6 +4,23 @@
 
 import Foundation
 
+class TRLexer: Lexer {
+    public enum Token: Equatable {
+        case Character(Character)
+        case Literal(String)
+    }
+    
+    var tokenRules: [(String, (String) -> Token?)] {
+        [
+            ("[A-Za-z0-9]", { .Character(Character($0)) }),
+        ]
+    }
+    
+    func literal(_ c: String) -> Token {
+        .Literal(c)
+    }
+}
+
 /***
  ```
  S -> S RANGE | ε
@@ -22,47 +39,8 @@ import Foundation
  lower |print | punct | rune | space | special | upper
  ```
  */
-
-class TRLexer: Lexer {
-    public enum Token: Equatable {
-        case Character(Character)
-        case Literal(String)
-    }
-    
-    var tokenRules: [(String, (String) -> Token?)] {
-        [
-            ("[A-Za-z0-9]", { .Character(Character($0)) }),
-        ]
-    }
-    
-    func literal(_ c: String) -> Token {
-        .Literal(c)
-    }
-}
-
-class Parser {
-    let tokens: [TRLexer.Token]
-    var index = 0
-
-    init(tokens: [TRLexer.Token]) {
-        self.tokens = tokens
-    }
-
-    var tokensAvailable: Bool {
-        return index < tokens.count
-    }
-
-    func peekCurrentToken() -> TRLexer.Token {
-        return tokens[index]
-    }
-
-    func popCurrentToken() -> TRLexer.Token {
-        let returnVal = tokens[index]
-        index += 1
-        return returnVal
-    }
-    
-    func parseExpression() throws -> ExprNode {
+class TRParser: Parser<TRLexer.Token> {
+    func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()
         
         // ε check
@@ -70,15 +48,15 @@ class Parser {
             return range
         }
         
-        return JoinOpNode(lhs: range as! RangeOpNode, rhs: try parseExpression())
+        return JoinOpNode(lhs: range, rhs: try parseExpression())
     }
     
-    func parseRange() throws -> ExprNode {
+    func parseRange() throws -> any AbstractSyntaxTree {
         let char = try parseCharacter()
         return try parseCont(lhs: char)
     }
     
-    func parseCont(lhs: CharacterNode) throws -> ExprNode {
+    func parseCont(lhs: CharacterNode) throws -> any AbstractSyntaxTree {
         // ε check
         guard tokensAvailable else {
             return lhs
@@ -100,9 +78,7 @@ class Parser {
         return CharacterNode(name: name)
     }
     
-
-    
-    func parse() throws -> ExprNode {
+    override func parse() throws -> any AbstractSyntaxTree {
         index = 0
         return try parseExpression()
     }
@@ -114,14 +90,10 @@ enum ParseError: Error {
     case ExpectedCharacter
 }
 
-public protocol ExprNode: CustomStringConvertible {
-    func execute() -> [Character]
-}
-
-public struct CharacterNode: ExprNode, Equatable {
+public struct CharacterNode: AbstractSyntaxTree, Equatable {
     public let name: Character
     
-    public func execute() -> [Character] {
+    public func generate() -> [Character] {
         [name]
     }
     
@@ -130,16 +102,16 @@ public struct CharacterNode: ExprNode, Equatable {
     }
 }
 
-public struct RangeOpNode: ExprNode, Equatable {
+public struct RangeOpNode: AbstractSyntaxTree, Equatable {
     public let lhs: CharacterNode
     public let rhs: CharacterNode
     
-    public func execute() -> [Character] {
-        guard let start = lhs.execute().first?.unicodeScalars.first?.value else {
+    public func generate() -> [Character] {
+        guard let start = lhs.generate().first?.unicodeScalars.first?.value else {
             return []
         }
         
-        guard let end = rhs.execute().first?.unicodeScalars.first?.value else {
+        guard let end = rhs.generate().first?.unicodeScalars.first?.value else {
             return []
         }
         
@@ -156,13 +128,13 @@ public struct RangeOpNode: ExprNode, Equatable {
     }
 }
 
-public struct JoinOpNode: ExprNode, Equatable {
-    public let lhs: RangeOpNode
-    public let rhs: ExprNode
+public struct JoinOpNode: AbstractSyntaxTree, Equatable {
+    public let lhs: any AbstractSyntaxTree
+    public let rhs: any AbstractSyntaxTree
     
-    public func execute() -> [Character] {
-        var returnVal = lhs.execute()
-        returnVal.append(contentsOf: rhs.execute())
+    public func generate() -> [Character] {
+        var returnVal = lhs.generate() as! [Character]
+        returnVal.append(contentsOf: rhs.generate() as! [Character])
         return returnVal
     }
     
@@ -170,16 +142,9 @@ public struct JoinOpNode: ExprNode, Equatable {
         return "JoinOpNode(lhs: \(lhs), rhs: \(rhs))"
     }
     
-    public static func == (left: JoinOpNode, right: JoinOpNode) -> Bool {
-        
-        if let leftRhs = left.rhs as? JoinOpNode, let rightRhs = right.rhs as? JoinOpNode {
-            return left.lhs == right.lhs && leftRhs == rightRhs
-        }
-        
-        if let leftRhs = left.rhs as? RangeOpNode, let rightRhs = right.rhs as? RangeOpNode {
-            return left.lhs == right.lhs && leftRhs == rightRhs
-        }
-        
-        return false
+    public static func == (myself: JoinOpNode, other: JoinOpNode) -> Bool {
+        myself.lhs.isEqual(to: other.lhs) && myself.rhs.isEqual(to: other.rhs)
     }
 }
+
+

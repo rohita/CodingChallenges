@@ -42,11 +42,10 @@ final class TranslateCharactersTests: XCTestCase {
     func testCharacterParser() throws {
         let expected: [Character] = ["a", "b", "c", "d", "e", "f", "0", "1", "2", "3", "4", "5"]
         let ast = try getAST("a-f0-5")
-        XCTAssertEqual(expected, ast.execute())
+        XCTAssertEqual(expected, ast.generate() as! [Character])
     }
     
-    func getAST(_ input: String) throws -> ExprNode {
-        return try Parser(tokens: lexer.tokenize(input)).parse()
+    func getAST(_ input: String) throws -> any AbstractSyntaxTree {
+        return try TRParser(tokens: lexer.tokenize(input)).parse() 
     }
-    
 }
