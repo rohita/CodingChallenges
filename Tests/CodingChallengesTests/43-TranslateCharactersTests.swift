@@ -10,6 +10,12 @@ final class TranslateCharactersTests: XCTestCase {
         XCTAssertEqual(expected, result)
     }
     
+    func testClassnameLexer() throws {
+        let result = lexer.tokenize("[:digit:]")
+        let expected: [TRLexer.Token] = [.Literal("["), .Literal(":"), .Digit, .Literal(":"), .Literal("]")]
+        XCTAssertEqual(expected, result)
+    }
+    
     func testSingleCharacterParser() throws {
         let ast = try getAST("k")
         let expected = CharacterNode(name: "k")
@@ -46,6 +52,6 @@ final class TranslateCharactersTests: XCTestCase {
     }
     
     func getAST(_ input: String) throws -> any AbstractSyntaxTree {
-        return try TRParser(tokens: lexer.tokenize(input)).parse() 
+        return try TRParser(tokens: lexer.tokenize(input)).parse()
     }
 }

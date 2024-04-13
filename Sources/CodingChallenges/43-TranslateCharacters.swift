@@ -6,12 +6,14 @@ import Foundation
 
 class TRLexer: Lexer {
     public enum Token: Equatable {
+        case Digit
         case Character(Character)
         case Literal(String)
     }
     
     var tokenRules: [(String, (String) -> Token?)] {
         [
+            ("digit", { _ in .Digit }),
             ("[A-Za-z0-9]", { .Character(Character($0)) }),
         ]
     }
@@ -39,7 +41,7 @@ class TRLexer: Lexer {
  lower |print | punct | rune | space | special | upper
  ```
  */
-class TRParser: Parser<TRLexer.Token> {
+class TRParser: CCParser<TRLexer.Token> {
     func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()
         
@@ -146,5 +148,7 @@ public struct JoinOpNode: AbstractSyntaxTree, Equatable {
         myself.lhs.isEqual(to: other.lhs) && myself.rhs.isEqual(to: other.rhs)
     }
 }
+
+
 
 
