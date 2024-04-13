@@ -116,7 +116,7 @@ extension Tree {
     
     func generatePrefixCodeTable() -> [Character: String] {
         var characterCodes = [Character: String]()
-        var queue: [(Node, String)] = [(self.root, "")]
+        var queue: [(TreeNode, String)] = [(self.root, "")]
         
         while (!queue.isEmpty) {
             let (node, code) = queue.removeFirst()

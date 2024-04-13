@@ -1,9 +1,9 @@
-protocol Node {
+protocol TreeNode {
     var isLeaf: Bool { get }
     var weight: Int { get }
 }
 
-struct LeafNode: Node {
+struct LeafNode: TreeNode {
     let value: Character
     let weight: Int
     var isLeaf: Bool = true
@@ -13,15 +13,15 @@ struct LeafNode: Node {
     }
 }
 
-struct InternalNode: Node {
-    let left: Node
-    let right: Node
+struct InternalNode: TreeNode {
+    let left: TreeNode
+    let right: TreeNode
     let weight: Int
     var isLeaf: Bool = false
 }
 
 struct Tree: Comparable {
-    let root: Node
+    let root: TreeNode
     var weight: Int {
         root.weight
     }
@@ -30,7 +30,7 @@ struct Tree: Comparable {
         root = LeafNode(value: element, weight: weight)
     }
     
-    init(left: Node, right: Node, weight: Int) {
+    init(left: TreeNode, right: TreeNode, weight: Int) {
         root = InternalNode(left: left, right: right, weight: weight)
     }
 
@@ -50,7 +50,7 @@ extension Tree: CustomDebugStringConvertible {
         return sb
     }
 
-    private func buildPrintString(stringBuilder: inout String, padding: String, pointer: String, node: Node, hasRightSibling: Bool) {
+    private func buildPrintString(stringBuilder: inout String, padding: String, pointer: String, node: TreeNode, hasRightSibling: Bool) {
         
         stringBuilder.append("\(padding)\(pointer)")
         

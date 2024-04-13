@@ -1,20 +1,20 @@
 public struct Stack<T> {
-    
-    var list : [T] = []
+    private var array: [T] = []
     public init() {}
     
-    public mutating func push(_ t: T) {
-        list.append(t)
+    public var isEmpty: Bool {
+        array.isEmpty
+    }
+    
+    public mutating func push(_ element: T) {
+        array.append(element)
     }
     
     public mutating func pop() -> T? {
-        guard peek() != nil else {
-            return nil
-        }
-        return list.removeLast()
+        isEmpty ? nil : array.removeLast()
     }
     
     public func peek() -> T? {
-        list.last
+        array.last
     }
 }
