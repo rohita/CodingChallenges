@@ -5,7 +5,7 @@
 import Foundation
 
 class TRLexer: Lexer {
-    public enum Token: Equatable {
+    public enum Token: Hashable, Equatable {
         case Digit
         case Character(Character)
         case Literal(String)
@@ -41,6 +41,19 @@ class TRLexer: Lexer {
  lower |print | punct | rune | space | special | upper
  ```
  */
+
+class TRParser2 {
+    enum MyTerm {
+        case char(String)
+        case classname(String)
+    }
+    
+    enum MyNonTerm {
+        
+    }
+}
+
+
 class TRParser: CCParser<TRLexer.Token> {
     func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()

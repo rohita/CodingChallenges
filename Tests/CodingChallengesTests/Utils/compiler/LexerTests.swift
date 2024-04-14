@@ -11,7 +11,7 @@ final class LexerTests: XCTestCase {
 }
 
 class CalcLexer: Lexer {
-    public enum Token {
+    public enum Token: Hashable {
         case Define
         case Identifier(String)
         case Number(Float)

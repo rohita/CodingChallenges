@@ -18,9 +18,9 @@ import Foundation
  The Lexer class is used to break input text into a collection of tokens
  specified by a collection of regular expression rules.
  */
-protocol Lexer {
+public protocol Lexer {
     /** Representation of a single token */
-    associatedtype Token
+    associatedtype Token: Hashable
     
     /**
      For each token, we need a regular expression capable of matching its

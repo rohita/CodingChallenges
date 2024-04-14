@@ -9,16 +9,15 @@
 //
 
 
-/**
+/*
  The Parser class is used to recognize language syntax that has been specified in the form of a context free grammar.
  
  In the grammar, there are two types of identifiers:
   a.) Terminals: Raw input tokens such as NUMBER, CHAR, +, -, etc.
   b.) Non-terminals: Rules comprised of a collection of terminals and other rules.
  
- Syntax directed translation: Symbols in the grammar become a kind of object.
- Values can be attached each symbol and operations carried out on those values
- when different grammar rules are recognized.
+ Symbols in the grammar become a kind of object. Values can be attached to each
+ symbol and operations carried out on those values when different grammar rules are recognized.
  
  When parsing the expression, an underlying stack and the current input token determine what happens
  next. If the next token looks like part of a valid grammar rule (based on other items on the stack), it is
@@ -29,47 +28,58 @@
 
 import Foundation
 
-public protocol Terminal : RawRepresentable, CaseIterable, Codable, Hashable where RawValue == Character {}
-public protocol NonTerminal : RawRepresentable, CaseIterable, Codable, Hashable where RawValue == String {}
+public protocol Terminal: Hashable {
+    associatedtype R: Rules
+    var output: R.Output { get }
+}
 
-// Type that can hold terminals and non-terminals
-public enum Expr<T : Hashable, NT : Hashable> : Hashable {
-    case term(T)
-    case nonTerm(NT)
+public protocol NonTerminal: Hashable {}
+
+// Grammer symbols that can hold terminals and non-terminals
+// It's interesting how Swift uses Enums for polymorphism.
+public enum Symbol<R : Rules> : Hashable {
+    case term(R.Term)
+    case nonTerm(R.NTerm)
 }
 
 // This encodes what a rule "does"
-public struct Rule<T : Terminal, NT : NonTerminal> {
-    public let lhs : NT
-    public let rhs : [Expr<T, NT>]
-    public init(_ lhs: NT, expression rhs: Expr<T, NT>...) {
+public struct Rule<R : Rules> {
+    public let lhs : R.NTerm
+    public let rhs : [Symbol<R>]
+    
+    /*
+     For terminals (lexer tokens), the value of the corresponding input symbol is the same
+     as the value assigned to tokens in the lexer module. For non-terminals, the input
+     value is whatever was returned by the production defined for its rule.
+     */
+    public let production: ([R.Output?]) -> R.Output
+    
+    public init(_ lhs: R.NTerm, expression rhs: Symbol<R>..., production: @escaping ([R.Output?]) -> R.Output) {
         self.lhs = lhs
         self.rhs = rhs
+        self.production = production
     }
-    init(_ lhs: NT, rhs: [Expr<T, NT>]) {
+    
+    init(_ lhs: R.NTerm, rhs: [Symbol<R>], production: @escaping ([R.Output?]) -> R.Output) {
         self.lhs = lhs
         self.rhs = rhs
+        self.production = production
     }
 }
 
-// Main type
+// Rules Enum. All rules will be cases in this Enum.
+// See examples in ParserTests file
 public protocol Rules : RawRepresentable, CaseIterable, Codable, Hashable where RawValue == String {
     associatedtype Term : Terminal
     associatedtype NTerm : NonTerminal
-    static var goal : NTerm { get }  // Goal is the start symbol of the grammer
-    var rule : Rule<Term, NTerm> { get }
-}
+    associatedtype Output
 
-public enum Action<R : Rules> : Codable, Equatable {
-    case shift(Int)
-    case reduce(R)
-    case accept
+    static var goal : NTerm { get }  // Goal is the start symbol of the grammer
+    var rule : Rule<Self> { get } // Implemented as switch statement for rules cases
 }
 
 /**
- 
  ***LR Parser Algorithm**.
-
  ```
      push initial state s0
      token = scan()
@@ -104,25 +114,35 @@ public enum Action<R : Rules> : Codable, Equatable {
  ```
  */
 
-public class Parser<R : Rules> {
+public enum Action<R : Rules> : Codable, Equatable {
+    case shift(Int)
+    case reduce(R)
+    case accept
+}
+
+public class Parser<R : Rules, L: Lexer> {
+    // The parser's stack consists of:
+    // - Symbol: Terminal or nonterminal
+    // - Value:  For terminals, the value assigned to tokens in the lexer module.
+    //           For non-terminals, the value is whatever was returned by the production defined for its rule.
+    // - State: Correspond to a finite-state machine that represents the parsing process.
+    public typealias StackItem = (symbol: Symbol<R>?, value: R.Output?, state: Int)
     
     // The action table is indexed by the current token and top-of-stack state, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
-    public let actions : [R.Term? : [Int : Action<R>]] = [:]
+    public let actions : [L.Token? : [Int : Action<R>]] = [:]
     
     // The goto table is used during a reduce action.
     // gotos happen for each recognized rule
     public let gotos : [R.NTerm : [Int : Int]] = [:]
     
-    
-    func parse(tokens: [R.Term]) throws {
+    // These input tokens are coming from the Lexer
+    func parse(tokens: [L.Token]) throws {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
-        
-        // The symbols pushed onto the parser's stack are not actually terminals and nonterminals.
-        // Instead, they are states, that correspond to a finite-state machine that represents the parsing process.
-        var stateStack = Stack<Int>()
-        stateStack.push(0)
+        var stateStack = Stack<StackItem>()
+        let endSymbol = StackItem(symbol: nil, value: nil, state: 0)
+        stateStack.push(endSymbol)
         
     loop:
         while true {
@@ -131,7 +151,7 @@ public class Parser<R : Rules> {
                 throw ParserError.undefinedState
             }
             
-            guard let action = actions[current]?[stateBefore] else {
+            guard let action = actions[current]?[stateBefore.state] else {
                 throw ParserError.noAction(token: current, state: stateBefore)
             }
             
@@ -139,22 +159,29 @@ public class Parser<R : Rules> {
                 
                 // accept input character and push new state onto stack
             case .shift(let state):
-                stateStack.push(state)
+                let term = current! as! R.Term
+                let nextStackItem = StackItem(symbol: .term(term), value: term.output as? R.Output, state: state)
+                stateStack.push(nextStackItem)
                 current = iterator.next()
                 
             case .reduce(let reduce):
                 let rule = reduce.rule
+                var input: [R.Output?] = []
                 for _ in rule.rhs {
-                    _ = stateStack.pop()
+                    input.append(stateStack.pop()?.value) // TODO: This could be inverted?
                 }
                 guard let stateAfter = stateStack.peek() else {
                     throw ParserError.undefinedState
                 }
-                //try construction(reduce, &outStack)
-                guard let nextState = gotos[rule.lhs]?[stateAfter] else {
-                    throw ParserError.noGoto(nonTerm: rule.lhs, state: stateAfter)
+                
+                let output = rule.production(input)
+                
+                guard let nextState = gotos[rule.lhs]?[stateAfter.state] else {
+                    throw ParserError.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
                 }
-                stateStack.push(nextState)
+                
+                let nextStackItem = StackItem(symbol: .nonTerm(rule.lhs), value: output, state: nextState)
+                stateStack.push(nextStackItem)
                 
             case .accept:
                 break loop
@@ -163,9 +190,11 @@ public class Parser<R : Rules> {
         }
     }
     
+
+    
     enum ParserError: Error {
         case undefinedState
-        case noAction(token: R.Term?, state: Int)
+        case noAction(token: L.Token?, state: StackItem)
         case invalidToken(token: R.Term?)
         case noGoto(nonTerm: any NonTerminal, state: Int)
     }
