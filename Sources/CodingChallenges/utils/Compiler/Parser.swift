@@ -8,77 +8,34 @@
 //   https://github.com/AnarchoSystems/LRParser
 //
 
+import Foundation
 
-/*
+public enum Action<R : Rules> : Codable, Equatable {
+    case shift(Int)
+    case reduce(R)
+    case accept
+}
+
+enum ParserError<R : Rules>: Error {
+    case undefinedState
+    case noAction(token: R.Term?, state: Int)
+    case invalidToken(token: R.Term?)
+    case noGoto(nonTerm: any NonTerminal, state: Int)
+    case shiftReduceConflict
+    case reduceReduceConflict(matching: [R])
+    case acceptConflict
+}
+
+
+/**
  The Parser class is used to recognize language syntax that has been specified in the form of a context free grammar.
- 
- In the grammar, there are two types of identifiers:
-  a.) Terminals: Raw input tokens such as NUMBER, CHAR, +, -, etc.
-  b.) Non-terminals: Rules comprised of a collection of terminals and other rules.
- 
- Symbols in the grammar become a kind of object. Values can be attached to each
- symbol and operations carried out on those values when different grammar rules are recognized.
  
  When parsing the expression, an underlying stack and the current input token determine what happens
  next. If the next token looks like part of a valid grammar rule (based on other items on the stack), it is
  generally shifted onto the stack. If the top of the stack contains a valid right-hand-side of a grammar rule,
  it is usually “reduced” and the symbols replaced with the symbol on the left-hand-side. When this reduction occurs,
  the appropriate action is triggered (if defined).
- */
-
-import Foundation
-
-public protocol Terminal: Hashable {
-    associatedtype R: Rules
-    var output: R.Output { get }
-}
-
-public protocol NonTerminal: Hashable {}
-
-// Grammer symbols that can hold terminals and non-terminals
-// It's interesting how Swift uses Enums for polymorphism.
-public enum Symbol<R : Rules> : Hashable {
-    case term(R.Term)
-    case nonTerm(R.NTerm)
-}
-
-// This encodes what a rule "does"
-public struct Rule<R : Rules> {
-    public let lhs : R.NTerm
-    public let rhs : [Symbol<R>]
-    
-    /*
-     For terminals (lexer tokens), the value of the corresponding input symbol is the same
-     as the value assigned to tokens in the lexer module. For non-terminals, the input
-     value is whatever was returned by the production defined for its rule.
-     */
-    public let production: ([R.Output?]) -> R.Output
-    
-    public init(_ lhs: R.NTerm, expression rhs: Symbol<R>..., production: @escaping ([R.Output?]) -> R.Output) {
-        self.lhs = lhs
-        self.rhs = rhs
-        self.production = production
-    }
-    
-    init(_ lhs: R.NTerm, rhs: [Symbol<R>], production: @escaping ([R.Output?]) -> R.Output) {
-        self.lhs = lhs
-        self.rhs = rhs
-        self.production = production
-    }
-}
-
-// Rules Enum. All rules will be cases in this Enum.
-// See examples in ParserTests file
-public protocol Rules : RawRepresentable, CaseIterable, Codable, Hashable where RawValue == String {
-    associatedtype Term : Terminal
-    associatedtype NTerm : NonTerminal
-    associatedtype Output
-
-    static var goal : NTerm { get }  // Goal is the start symbol of the grammer
-    var rule : Rule<Self> { get } // Implemented as switch statement for rules cases
-}
-
-/**
+ 
  ***LR Parser Algorithm**.
  ```
      push initial state s0
@@ -113,14 +70,7 @@ public protocol Rules : RawRepresentable, CaseIterable, Codable, Hashable where 
      end do
  ```
  */
-
-public enum Action<R : Rules> : Codable, Equatable {
-    case shift(Int)
-    case reduce(R)
-    case accept
-}
-
-public class Parser<R : Rules, L: Lexer> {
+public struct Parser<R : Rules> {
     // The parser's stack consists of:
     // - Symbol: Terminal or nonterminal
     // - Value:  For terminals, the value assigned to tokens in the lexer module.
@@ -130,14 +80,19 @@ public class Parser<R : Rules, L: Lexer> {
     
     // The action table is indexed by the current token and top-of-stack state, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
-    public let actions : [L.Token? : [Int : Action<R>]] = [:]
+    public let actions : [R.Term? : [Int : Action<R>]]
     
     // The goto table is used during a reduce action.
     // gotos happen for each recognized rule
-    public let gotos : [R.NTerm : [Int : Int]] = [:]
+    public let gotos : [R.NTerm : [Int : Int]]
+    
+    public init(actions: [R.Term? : [Int : Action<R>]], gotos: [R.NTerm : [Int : Int]]) {
+        self.actions = actions
+        self.gotos = gotos
+    }
     
     // These input tokens are coming from the Lexer
-    func parse(tokens: [L.Token]) throws {
+    func parse(tokens: [R.Term]) throws -> R.Output? {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()
@@ -148,19 +103,18 @@ public class Parser<R : Rules, L: Lexer> {
         while true {
             
             guard let stateBefore = stateStack.peek() else {
-                throw ParserError.undefinedState
+                throw ParserError<R>.undefinedState
             }
             
             guard let action = actions[current]?[stateBefore.state] else {
-                throw ParserError.noAction(token: current, state: stateBefore)
+                throw ParserError<R>.noAction(token: current, state: stateBefore.state)
             }
             
             switch action {
                 
                 // accept input character and push new state onto stack
             case .shift(let state):
-                let term = current! as! R.Term
-                let nextStackItem = StackItem(symbol: .term(term), value: term.output as? R.Output, state: state)
+                let nextStackItem = StackItem(symbol: .term(current!), value: current?.output as? R.Output, state: state)
                 stateStack.push(nextStackItem)
                 current = iterator.next()
                 
@@ -171,13 +125,13 @@ public class Parser<R : Rules, L: Lexer> {
                     input.append(stateStack.pop()?.value) // TODO: This could be inverted?
                 }
                 guard let stateAfter = stateStack.peek() else {
-                    throw ParserError.undefinedState
+                    throw ParserError<R>.undefinedState
                 }
                 
                 let output = rule.production(input)
                 
                 guard let nextState = gotos[rule.lhs]?[stateAfter.state] else {
-                    throw ParserError.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
+                    throw ParserError<R>.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
                 }
                 
                 let nextStackItem = StackItem(symbol: .nonTerm(rule.lhs), value: output, state: nextState)
@@ -188,15 +142,10 @@ public class Parser<R : Rules, L: Lexer> {
             }
             
         }
-    }
-    
-
-    
-    enum ParserError: Error {
-        case undefinedState
-        case noAction(token: L.Token?, state: StackItem)
-        case invalidToken(token: R.Term?)
-        case noGoto(nonTerm: any NonTerminal, state: Int)
+        
+        return stateStack.pop()?.value
     }
 }
+
+
 

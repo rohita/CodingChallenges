@@ -42,18 +42,6 @@ class TRLexer: Lexer {
  ```
  */
 
-class TRParser2 {
-    enum MyTerm {
-        case char(String)
-        case classname(String)
-    }
-    
-    enum MyNonTerm {
-        
-    }
-}
-
-
 class TRParser: CCParser<TRLexer.Token> {
     func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()
