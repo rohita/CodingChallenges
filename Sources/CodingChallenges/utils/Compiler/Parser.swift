@@ -10,7 +10,7 @@
 
 import Foundation
 
-public enum Action<R : Rules> : Codable, Equatable {
+public enum Action<R : Rules> : Equatable {
     case shift(Int)
     case reduce(R)
     case accept
@@ -76,7 +76,7 @@ public struct Parser<R : Rules> {
     // - Value:  For terminals, the value assigned to tokens in the lexer module.
     //           For non-terminals, the value is whatever was returned by the production defined for its rule.
     // - State: Correspond to a finite-state machine that represents the parsing process.
-    public typealias StackItem = (symbol: Symbol<R>?, value: R.Output?, state: Int)
+    public typealias StackItem = (symbol: Symbol<R>?, value: SymbolValue<R>, state: Int)
     
     // The action table is indexed by the current token and top-of-stack state, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
@@ -96,7 +96,7 @@ public struct Parser<R : Rules> {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()
-        let endSymbol = StackItem(symbol: nil, value: nil, state: 0)
+        let endSymbol = StackItem(symbol: nil, value: .eof, state: 0)
         stateStack.push(endSymbol)
         
     loop:
@@ -114,15 +114,15 @@ public struct Parser<R : Rules> {
                 
                 // accept input character and push new state onto stack
             case .shift(let state):
-                let nextStackItem = StackItem(symbol: .term(current!), value: current?.output as? R.Output, state: state)
+                let nextStackItem = StackItem(symbol: .term(current!), value: .term(current!.rawValue), state: state)
                 stateStack.push(nextStackItem)
                 current = iterator.next()
                 
             case .reduce(let reduce):
                 let rule = reduce.rule
-                var input: [R.Output?] = []
+                var input: [SymbolValue<R>] = []
                 for _ in rule.rhs {
-                    input.append(stateStack.pop()?.value) // TODO: This could be inverted?
+                    input.append(stateStack.pop()!.value) // TODO: This could be inverted?
                 }
                 guard let stateAfter = stateStack.peek() else {
                     throw ParserError<R>.undefinedState
@@ -134,7 +134,7 @@ public struct Parser<R : Rules> {
                     throw ParserError<R>.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
                 }
                 
-                let nextStackItem = StackItem(symbol: .nonTerm(rule.lhs), value: output, state: nextState)
+                let nextStackItem = StackItem(symbol: .nonTerm(rule.lhs), value: .nonTerm(output), state: nextState)
                 stateStack.push(nextStackItem)
                 
             case .accept:
@@ -143,7 +143,11 @@ public struct Parser<R : Rules> {
             
         }
         
-        return stateStack.pop()?.value
+        guard let next = stateStack.pop(), case .nonTerm(let finalOutput) = next.value else {
+            return nil
+        }
+        
+        return finalOutput
     }
 }
 

@@ -4,14 +4,11 @@ import CodingChallenges
  Test Grammer
  
  ```
- S -> S RANGE
-
- RANGE -> CHAR - CHAR
- RANGE -> CHAR
-
+ S -> S TOKEN
+ TOKEN -> CHAR CONT
+ CONT -> - CHAR
  CHAR -> a | b | c | d
  ```
-
  */
 
 public class TestGrammerLexer: Lexer {
@@ -32,56 +29,69 @@ public class TestGrammerLexer: Lexer {
 }
 
 extension TestGrammerLexer.Token : Terminal {
-    public static var allCases: [TestGrammerLexer.Token] {
-        var returnVal: [TestGrammerLexer.Token] = []
-        returnVal.append(.Character("a"))
-        returnVal.append(.Character("d"))
-        returnVal.append(.Literal("-"))
-        return returnVal
+    public init?(rawValue: Character) {
+        self = .Character(rawValue)
     }
     
-    public typealias R = TestGrammer
-    
-    public var output: [Character] {
+    public var rawValue: Character {
         switch self {
-        case .Character(let char): [char]
-        case .Literal(_): []
+        case .Character(let char): char
+        case .Literal(let char): char
         }
+    }
+    
+    public static var allCases: [TestGrammerLexer.Token] {
+        var returnVal: [TestGrammerLexer.Token] = []
+        ("a"..."c").characters.forEach { returnVal.append(.Character($0)) }
+        returnVal.append(.Literal("-"))
+        return returnVal
     }
 }
 
 public enum TestGrammerNonTerminal : String, NonTerminal {
     case S
-    case RANGE
+    case TOKEN
+    case CONT
     case CHAR
 }
 
-public enum TestGrammer: Rules {
+public enum TestGrammerRule: Rules {
+    public static var allCases: [TestGrammerRule] {
+        var returnVal: [TestGrammerRule] = []
+        returnVal.append(.start)
+        returnVal.append(.token)
+        returnVal.append(.cont)
+        ("a"..."c").characters.forEach { returnVal.append(.char($0)) }
+        return returnVal
+    }
+    
     public typealias Term = TestGrammerLexer.Token
     public typealias NTerm = TestGrammerNonTerminal
     public typealias Output = [Character]
     
-    case input //  S -> S RANGE
-    case range1 // RANGE -> CHAR - CHAR
-    case range2 // RANGE -> CHAR
-    case charA // CHAR -> a
-    case charD // CHAR -> d
+    case start //  S -> S TOKEN
+    case token //  CHAR CONT
+    case cont // - CHAR
+    case char(Character) // CHAR -> a .. z A..Z 0..9
     
     public static var goal : TestGrammerNonTerminal {.S} // Start symbol
     
-    public var rule : Rule<TestGrammer> {
+    public var rule : Rule<TestGrammerRule> {
         switch self {
-        case .input:
-            Rule(.S, expression: .nonTerm(.S), .nonTerm(.RANGE)) { p in
-                p[0]! + p[1]!
+        case .start:
+            Rule(.S, expression: /.S, /.TOKEN) { values in
+                var returnVal: [Character] = []
+                returnVal.append(contentsOf: values[0].nonTermValue!)
+                returnVal.append(contentsOf: values[1].nonTermValue!)
+                return returnVal
             }
-        case .range1:
-            Rule(.RANGE, expression: .nonTerm(.CHAR), .term(.Literal("-")), .nonTerm(.CHAR)) { p in
-                guard let start = p[0]?.first?.unicodeScalars.first?.value else {
+        case .token:
+            Rule(.TOKEN, expression: /.CHAR, /.CONT) { values in
+                guard let start = values[0].nonTermValue!.first?.unicodeScalars.first?.value else {
                     return []
                 }
                 
-                guard let end = p[2]?.first?.unicodeScalars.first?.value else {
+                guard let end = values[1].nonTermValue!.first?.unicodeScalars.first?.value else {
                     return []
                 }
                 
@@ -92,18 +102,12 @@ public enum TestGrammer: Rules {
                 
                 return returnVal
             }
-        case .range2:
-            Rule(.RANGE, expression: .nonTerm(.CHAR)) { p in
-                p[0]!
+        case .cont:
+            Rule(.CONT, expression: /.Literal("-"), /.CHAR) { values in
+                values[1].nonTermValue!
             }
-        case .charA:
-            Rule(.CHAR, expression: .term(.Character("a"))) { p in
-                p[0]!
-            }
-        case .charD:
-            Rule(.CHAR, expression: .term(.Character("d"))) { p in
-                p[0]!
-            }
+        case .char(let c):
+            Rule(.CHAR, expression: /.Character(c)) { _ in [c] }
         }
     }
 }

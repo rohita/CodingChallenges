@@ -1,18 +1,10 @@
-//
-//  File.swift
-//
-//
-//  Created by Rohit Agarwal on 4/14/24.
-//
-
 import Foundation
 
 
-fileprivate struct Item<R : Rules>: GraphNode {
-    
+struct Item<R : Rules>: GraphNode {
     let rule : R? // augmented rule can be nil
     let all : [Symbol<R>] // rhs of the rule
-    let ptr : Int // represents the next position to parse
+    let ptr : Int // represents the 'dot', next position to parse
     
     func getEdges() -> [R.NTerm : [Item<R>]] {
         
@@ -41,9 +33,8 @@ fileprivate struct Item<R : Rules>: GraphNode {
     }
 }
 
-fileprivate struct ItemSet<R : Rules>: GraphNode {
-    
-    let graph : EdgeLabledGraph<Item<R>>
+struct ItemSet<R : Rules>: GraphNode {
+    let items: [Item<R>]
     
     func getEdges() throws -> [Symbol<R> : [ItemSet<R>]] {
         
@@ -51,7 +42,7 @@ fileprivate struct ItemSet<R : Rules>: GraphNode {
         // here, we can already detect shift-reduce conflicts
         // and reduce-reduce conflicts
         
-        let exprs = Set(graph.nodes.compactMap{$0.tobeParsed.first})
+        let exprs = Set(items.compactMap{$0.tobeParsed.first})
         
         if exprs.isEmpty {
             _ = try reduceRule()
@@ -64,12 +55,12 @@ fileprivate struct ItemSet<R : Rules>: GraphNode {
         
         return try Dictionary(uniqueKeysWithValues: exprs.map{symbol in
             try (symbol,
-                 [ItemSet(graph: EdgeLabledGraph(seeds: graph.nodes.compactMap{$0.tryAdvance(to: symbol)}))])
+                 [ItemSet(items: EdgeLabledGraph(seeds: items.compactMap{$0.tryAdvance(to: symbol)}).nodes)])
         })
     }
     
     func reduceRule() throws -> R? {
-        let results : [R] = graph.nodes.lazy.filter(\.tobeParsed.isEmpty).compactMap(\.rule)
+        let results : [R] = items.lazy.filter(\.tobeParsed.isEmpty).compactMap(\.rule)
         if results.count > 1 {
             throw ParserError<R>.reduceReduceConflict(matching: results)
         }
@@ -88,8 +79,8 @@ fileprivate struct ItemSetTable<R : Rules> {
                                     ptr: 0)
         // now, do both graph closures
         let itemSetGraph = try EdgeLabledGraph(seeds: [augmentedRule])
-        let itemSet = ItemSet(graph: itemSetGraph)
-        graph = try EdgeLabledGraph(seeds: [itemSet])
+        let itemSet0 = ItemSet(items: itemSetGraph.nodes)
+        graph = try EdgeLabledGraph(seeds: [itemSet0])
     }
     
     func actionTable() throws -> [R.Term? : [Int : Action<R>]] {
@@ -130,7 +121,7 @@ fileprivate struct ItemSetTable<R : Rules> {
             
             // accepts
             
-            if graph.nodes[start].graph.nodes
+            if graph.nodes[start].items
                 .contains(where: {$0.rule == nil && $0.tobeParsed.isEmpty}) {
                 if dict[nil] == nil {
                     dict[nil] = [start : .accept]

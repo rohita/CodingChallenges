@@ -17,6 +17,13 @@ final class ParserTests: XCTestCase {
         let result = lexer.tokenize(charStream)
         XCTAssertEqual(expected, result)
     }
+    
+    func testSingleChar() throws {
+        let lexer = TestGrammerLexer()
+        let tokens = lexer.tokenize("a")
+        let parser = try Parser.LR0(rules: TestGrammerRule.self)
+        print(try parser.parse(tokens: tokens) ?? "Error")
+    }
 }
 
 

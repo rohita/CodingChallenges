@@ -20,7 +20,7 @@ import Foundation
  */
 public protocol Lexer {
     /** Representation of a single token */
-    associatedtype Token: Hashable
+    associatedtype Token //: Terminal
     
     /**
      For each token, we need a regular expression capable of matching its
