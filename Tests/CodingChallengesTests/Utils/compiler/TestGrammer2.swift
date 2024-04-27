@@ -14,7 +14,8 @@ import XCTest
 final class TG2ParserTests: XCTestCase {
     func testTG2() throws {
         let parser = try Parser.LR0(rules: TG2Rules.self)
-        let tokens: [TG2Term] = [.one, .plus, .one]
+        print(parser)
+        let tokens: [TG2Term] = [.zero, .times, .one, .plus, .one]
         print(try parser.parse(tokens: tokens) ?? "Error")
     }
 }

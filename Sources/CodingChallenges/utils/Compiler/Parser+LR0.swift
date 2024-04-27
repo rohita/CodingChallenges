@@ -10,7 +10,7 @@ struct Item<R : Rules>: GraphNode {
         
         // we can reach any "unparsed" rule beginning with
         // the next symbol, provided the symbol is a non-terminal
-        guard let next = tobeParsed.first, case .nonTerm(let nT) = next else {
+        guard case .nonTerm(let nT) = nextSymbol else {
             return [:]
         }
         
@@ -22,14 +22,18 @@ struct Item<R : Rules>: GraphNode {
     }
     
     func tryAdvance(to sym: Symbol<R>) -> Item<R>? {
-        tobeParsed.first.flatMap{ $0 == sym ?
+        nextSymbol.flatMap{ $0 == sym ?
             Item(rule: rule, all: all, ptr: ptr + 1) :
             nil
         }
     }
     
-    var tobeParsed : some Collection<Symbol<R>> {
-        all[ptr...]
+    var nextSymbol: Symbol<R>? {
+        all.indices.contains(ptr) ? all[ptr] : nil
+    }
+    
+    var allParsed: Bool {
+        ptr >= all.count
     }
 }
 
@@ -42,7 +46,7 @@ struct ItemSet<R : Rules>: GraphNode {
         // here, we can already detect shift-reduce conflicts
         // and reduce-reduce conflicts
         
-        let exprs = Set(items.compactMap{$0.tobeParsed.first})
+        let exprs = items.compactMap{$0.nextSymbol}.dedupe()
         
         if exprs.isEmpty {
             _ = try reduceRule()
@@ -60,7 +64,7 @@ struct ItemSet<R : Rules>: GraphNode {
     }
     
     func reduceRule() throws -> R? {
-        let results : [R] = items.lazy.filter(\.tobeParsed.isEmpty).compactMap(\.rule)
+        let results : [R] = items.lazy.filter(\.allParsed).compactMap(\.rule)
         if results.count > 1 {
             throw ParserError<R>.reduceReduceConflict(matching: results)
         }
@@ -105,8 +109,8 @@ fileprivate struct ItemSetTable<R : Rules> {
             
             // reductions
             
-            if let rule = try graph.nodes[start].reduceRule() {
-                for term in Array(R.Term.allCases) as [R.Term?] + [nil] {
+            if let rule = try graph.nodes[start].reduceRule() { // the one rule in the set which is ended/parsed
+                for term in Array(R.Term.allCases) as [R.Term?] + [nil] { // in LR0, reduce goes in all terms for that state
                     if dict[term] == nil {
                         dict[term] = [start: .reduce(rule)]
                     }
@@ -122,7 +126,7 @@ fileprivate struct ItemSetTable<R : Rules> {
             // accepts
             
             if graph.nodes[start].items
-                .contains(where: {$0.rule == nil && $0.tobeParsed.isEmpty}) {
+                .contains(where: {$0.rule == nil && $0.allParsed}) {  // which itemset has the fully parsed augmented rule
                 if dict[nil] == nil {
                     dict[nil] = [start : .accept]
                 }

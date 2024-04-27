@@ -10,7 +10,7 @@
 import Foundation
 
 
-public protocol Terminal: RawRepresentable, CaseIterable, Hashable where RawValue == Character {}
+public protocol Terminal: RawRepresentable, CaseIterable, Hashable, CustomDebugStringConvertible where RawValue == Character {}
 public protocol NonTerminal: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
 
 // Grammer symbols that can hold terminals and non-terminals

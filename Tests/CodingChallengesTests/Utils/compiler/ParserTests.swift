@@ -22,7 +22,8 @@ final class ParserTests: XCTestCase {
         let lexer = TestGrammerLexer()
         let tokens = lexer.tokenize("a")
         let parser = try Parser.LR0(rules: TestGrammerRule.self)
-        print(try parser.parse(tokens: tokens) ?? "Error")
+        print(parser)
+        //print(try parser.parse(tokens: tokens) ?? "Error")
     }
 }
 

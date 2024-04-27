@@ -49,3 +49,10 @@ extension String {
         self.init(UnicodeScalarView(sequence))
     }
 }
+
+extension Sequence where Element: Hashable {
+    func dedupe() -> [Element] {
+        var set = Set<Element>()
+        return filter { set.insert($0).inserted }
+    }
+}
