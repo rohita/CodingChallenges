@@ -6,7 +6,7 @@ import CodingChallenges
  ```
  S -> S TOKEN
  TOKEN -> CHAR CONT
- CONT -> - CHAR
+ CONT -> - CHAR | ε
  CHAR -> a | b | c | d
  ```
  */
@@ -61,6 +61,7 @@ public enum TestGrammerRule: Rules {
         returnVal.append(.start)
         returnVal.append(.token)
         returnVal.append(.cont)
+        returnVal.append(.contEmpty)
         ("a"..."c").characters.forEach { returnVal.append(.char($0)) }
         return returnVal
     }
@@ -70,8 +71,9 @@ public enum TestGrammerRule: Rules {
     public typealias Output = [Character]
     
     case start //  S -> S TOKEN
-    case token //  CHAR CONT
-    case cont // - CHAR
+    case token //  TOKEN -> CHAR CONT
+    case cont //   CONT -> - CHAR
+    case contEmpty // CONT -> ε
     case char(Character) // CHAR -> a .. z A..Z 0..9
     
     public static var goal : TestGrammerNonTerminal {.S} // Start symbol
@@ -105,6 +107,10 @@ public enum TestGrammerRule: Rules {
         case .cont:
             Rule(.CONT, expression: /.Literal("-"), /.CHAR) { values in
                 values[1].nonTermValue!
+            }
+        case .contEmpty:
+            Rule(.CONT) { values in
+                []
             }
         case .char(let c):
             Rule(.CHAR, expression: /.Character(c)) { _ in [c] }

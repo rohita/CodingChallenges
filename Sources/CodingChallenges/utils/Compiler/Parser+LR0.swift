@@ -1,12 +1,24 @@
-import Foundation
+/**
+ References:
+  Good Overview: https://www.youtube.com/watch?v=ox904ID0Mvs&ab_channel=GeeksforGeeksGATECSE%7CDataScienceandAI
+  Part 1: https://www.youtube.com/watch?v=SyTXugfG9nw&ab_channel=GeeksforGeeksGATECSE%7CDataScienceandAI
+  Part 2: https://www.youtube.com/watch?v=0rUJvQ3-GwI&t=1873s&ab_channel=GeeksforGeeksGATECSE%7CDataScienceandAI
+ 
+ Wiki:
+  https://en.wikipedia.org/wiki/Simple_LR_parser
+  https://en.wikipedia.org/wiki/LR_parser
+ */
 
+
+import Foundation
+import Collections
 
 struct Item<R : Rules>: GraphNode {
     let rule : R? // augmented rule can be nil
     let all : [Symbol<R>] // rhs of the rule
     let ptr : Int // represents the 'dot', next position to parse
     
-    func getEdges() -> [R.NTerm : [Item<R>]] {
+    func getEdges() -> OrderedDictionary<R.NTerm, [Item<R>]> {
         
         // we can reach any "unparsed" rule beginning with
         // the next symbol, provided the symbol is a non-terminal
@@ -40,7 +52,7 @@ struct Item<R : Rules>: GraphNode {
 struct ItemSet<R : Rules>: GraphNode {
     let items: [Item<R>]
     
-    func getEdges() throws -> [Symbol<R> : [ItemSet<R>]] {
+    func getEdges() throws -> OrderedDictionary<Symbol<R>, [ItemSet<R>]> {
         
         // we can reach an itemset by "advancing" the items
         // here, we can already detect shift-reduce conflicts
@@ -57,7 +69,7 @@ struct ItemSet<R : Rules>: GraphNode {
             throw ParserError<R>.shiftReduceConflict
         }
         
-        return try Dictionary(uniqueKeysWithValues: exprs.map{symbol in
+        return try OrderedDictionary(uniqueKeysWithValues: exprs.map{symbol in
             try (symbol,
                  [ItemSet(items: EdgeLabledGraph(seeds: items.compactMap{$0.tryAdvance(to: symbol)}).nodes)])
         })

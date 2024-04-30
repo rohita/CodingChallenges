@@ -122,7 +122,7 @@ public struct Parser<R : Rules> {
                 let rule = reduce.rule
                 var input: [SymbolValue<R>] = []
                 for _ in rule.rhs {
-                    input.append(stateStack.pop()!.value) // TODO: This could be inverted?
+                    input.insert(stateStack.pop()!.value, at: 0)
                 }
                 guard let stateAfter = stateStack.peek() else {
                     throw ParserError<R>.undefinedState

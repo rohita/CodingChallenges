@@ -12,11 +12,18 @@ let package = Package(
             name: "CodingChallenges",
             targets: ["CodingChallenges"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-collections.git", .upToNextMinor(from: "1.1.0"))
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "CodingChallenges"),
+            name: "CodingChallenges",
+            dependencies: [
+              .product(name: "Collections", package: "swift-collections")
+            ]
+        ),
         .testTarget(
             name: "CodingChallengesTests",
             dependencies: ["CodingChallenges"]),

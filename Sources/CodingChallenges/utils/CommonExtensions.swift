@@ -15,6 +15,18 @@ extension String {
     func padRight(toLength: Int, withPad character: Character) -> String {
         return self + String(repeating: "0", count: toLength - self.count)
     }
+    
+    init<S: Sequence>(_ sequence: S) where S.Element == Unicode.Scalar {
+        self.init(UnicodeScalarView(sequence))
+    }
+    
+    func split(_ seperator: String = " ") -> [String] {
+        self.split(separator: seperator).compactMap{String($0)}
+    }
+    
+    func strip() -> String {
+        self.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 extension Collection where Index: BinaryInteger {
@@ -42,12 +54,6 @@ public extension ClosedRange where Bound == Unicode.Scalar {
     var scalars: [Unicode.Scalar]   { range.compactMap(Unicode.Scalar.init) }
     var characters: [Character]     { scalars.map(Character.init) }
     var string: String              { String(scalars) }
-}
-
-extension String {
-    init<S: Sequence>(_ sequence: S) where S.Element == Unicode.Scalar {
-        self.init(UnicodeScalarView(sequence))
-    }
 }
 
 extension Sequence where Element: Hashable {

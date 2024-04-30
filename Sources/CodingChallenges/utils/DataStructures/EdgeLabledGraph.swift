@@ -1,10 +1,11 @@
 import Foundation
+import Collections
 
 // Instead of edges always going to one node, they can go to multiple nodes.
 // So we create a new type 'EdgeLable', which is a set of edges.
 public protocol GraphNode : Hashable, CustomDebugStringConvertible {
     associatedtype EdgeLable : Hashable
-    func getEdges() throws -> [EdgeLable: [Self]]
+    func getEdges() throws -> OrderedDictionary<EdgeLable, [Self]>
 }
 
 public struct EdgeLabledGraph<N : GraphNode> : Hashable {
