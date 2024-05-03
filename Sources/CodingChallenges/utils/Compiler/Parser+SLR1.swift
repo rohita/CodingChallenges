@@ -16,6 +16,7 @@ extension PythonExample {
             self.dotIndex = dotIndex
         }
         
+        // represents the next symbol to parse
         var dotSymbol: String? {
             rhs.indices.contains(dotIndex) ? rhs[dotIndex] : nil
         }
@@ -28,15 +29,38 @@ extension PythonExample {
         }
     }
     
-    struct ItemSet: Hashable {
+    struct ItemSet: Equatable {
         let rules: [Rule]
+        var transitions: [String: Int]
         
         var dotSymbols: OrderedSet<String> {
             OrderedSet(rules.compactMap{$0.dotSymbol})
         }
         
-        func rulesAfterParsing(symbol charNextToDot: String) -> [Rule] {
-            rules.compactMap{$0.advanceDot(after: charNextToDot)}
+        func rulesAfterParsing(_ symbol: String) -> [Rule] {
+            rules.compactMap{$0.advanceDot(after: symbol)}
+        }
+        
+        static func == (lhs: ItemSet, rhs: ItemSet) -> Bool {
+            lhs.rules == rhs.rules
+        }
+        
+        init(rules: [Rule], transitions: [String : Int] = [:]) {
+            self.rules = rules
+            self.transitions = transitions
+        }
+        
+        init(using kernelRules: [Rule], allRules: [Rule]) {
+            var runningClosureSet = OrderedSet(kernelRules)
+            var prevLen = -1
+            while prevLen != runningClosureSet.count {
+                prevLen = runningClosureSet.count
+                let dotSymbols = OrderedSet(runningClosureSet.compactMap{$0.dotSymbol})
+                let newClosureRules = allRules.filter{dotSymbols.contains($0.lhs)}
+                runningClosureSet.append(contentsOf: newClosureRules)
+            }
+            
+            self.init(rules: runningClosureSet.elements)
         }
     }
 }
@@ -44,8 +68,7 @@ extension PythonExample {
 class PythonExample {
     let separatedRulesList: [Rule]
     let start_symbol: String
-    var statesDict: [Int: ItemSet]
-    var stateMap: [Int: [String: Int]]
+    var states: [Int: ItemSet] = [:]
     
     init(rules: [String], startSymbol: String) {
         // newRules stores processed output rules
@@ -79,39 +102,18 @@ class PythonExample {
         
         self.separatedRulesList = newRules
         self.start_symbol = newRules[0].lhs
-        self.statesDict = [:]
-        self.stateMap = [:]
-    }
-    
-    func computeClosure(using kernelRules: [Rule]) -> ItemSet {
-        // closureSet stores processed output
-        var closureSet: OrderedSet<Rule> = OrderedSet(kernelRules)
-        
-        // iterate until new states are getting added in closureSet
-        var prevLen = -1
-        while prevLen != closureSet.count {
-            prevLen = closureSet.count
-            
-            // If dot pointing at new symbol, add corresponding rules to tempClosure
-            let nextSymbols = OrderedSet(closureSet.compactMap{$0.dotSymbol})
-            let tempClosureSet = separatedRulesList.filter{nextSymbols.contains($0.lhs)}
-
-            // add new closure rules to closureSet
-            closureSet.append(contentsOf: tempClosureSet)
-        }
-        
-        return ItemSet(rules: closureSet.elements)
     }
     
     func generateStates(startingState: ItemSet) {
-        statesDict = [0: startingState]
+        states = [0: startingState]
+        
         var prevLen = -1
         var visited: Set<Int> = []
         
         // run loop while new states are getting added
-        while (statesDict.count != prevLen) {
-            prevLen = statesDict.count
-            let unvisitedStates = statesDict.keys.filter{!visited.contains($0)}.sorted()
+        while (states.count != prevLen) {
+            prevLen = states.count
+            let unvisitedStates = states.keys.filter{!visited.contains($0)}.sorted()
             
             for state in unvisitedStates {
                 visited.insert(state)
@@ -121,18 +123,13 @@ class PythonExample {
     }
     
     private func computeTransitions(from state: Int) {
-        for symbol in statesDict[state]!.dotSymbols {
-            let newStateKernelRules = statesDict[state]!.rulesAfterParsing(symbol: symbol)
-            let newState = computeClosure(using: newStateKernelRules)
-            let newStateNum = statesDict.first{$0.value == newState}?.key ?? statesDict.count
+        for transitionSymbol in states[state]!.dotSymbols {
+            let newStateKernelRules = states[state]!.rulesAfterParsing(transitionSymbol)
+            let newStateItemSet = ItemSet(using: newStateKernelRules, allRules: separatedRulesList)
+            let newStateNum = states.first{$0.value == newStateItemSet}?.key ?? states.count
             
-            statesDict[newStateNum] = newState
-            
-            if stateMap[state] == nil {
-                stateMap[state] = [symbol : newStateNum]
-            } else {
-                stateMap[state]![symbol] = newStateNum
-            }
+            states[newStateNum] = states[newStateNum] ?? newStateItemSet
+            states[state]?.transitions[transitionSymbol] = newStateNum
         }
     }
 }

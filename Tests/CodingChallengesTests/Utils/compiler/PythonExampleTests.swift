@@ -29,7 +29,7 @@ final class PythonExampleTests: XCTestCase {
         }
     }
     
-    func printStateTransitions(stateMap: [Int: [String: Int]]) {
+    func printStateTransitions(stateMap: [Int: PythonExample.ItemSet]) {
         let numRows = stateMap.keys.max()! + 1
         let columnWidth = 5
         var rows = [String](repeating: "", count: numRows)
@@ -43,7 +43,7 @@ final class PythonExampleTests: XCTestCase {
         for i in 0..<numRows {
             rows[i].append(String(format: "%4d |", i))
             for term in columnHeaders {
-                let transitionState = stateMap[i]?[term] != nil ? String(stateMap[i]![term]!) : " "
+                let transitionState = stateMap[i]?.transitions[term] != nil ? String(stateMap[i]!.transitions[term]!) : " "
                 rows[i].append(String(format: " %-\(columnWidth)s", (transitionState as NSString).utf8String!))
             }
         }
@@ -69,18 +69,18 @@ final class PythonExampleTests: XCTestCase {
         printResult(rules: p.separatedRulesList)
         
         print("\nCalculated closure: I0\n")
-        let I0 = p.computeClosure(using: [p.separatedRulesList[0]])
+        let I0 = PythonExample.ItemSet(using: [p.separatedRulesList[0]], allRules: p.separatedRulesList)
         printResult(rules: I0.rules)
         
         p.generateStates(startingState: I0)
         print("\nStates Generated: \n")
-        for st in p.statesDict.sorted(by: { $0.key < $1.key }) {
+        for st in p.states.sorted(by: { $0.key < $1.key }) {
             print("State = I\(st.key)")
             printResult(rules: st.value.rules)
             print()
         }
         
         print("Result of GOTO computation:\n")
-        printStateTransitions(stateMap: p.stateMap)
+        printStateTransitions(stateMap: p.states)
     }
 }
