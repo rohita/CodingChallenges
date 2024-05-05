@@ -29,12 +29,32 @@ extension String {
     }
 }
 
-extension Collection where Index: BinaryInteger {
+
+
+extension RangeReplaceableCollection where Index: BinaryInteger, Element: Hashable {
     func element(at index: Index) -> Element? {
         guard index < count else {
             return nil
         }
         return self[index]
+    }
+    
+    func dedupe() -> [Element] {
+        var set = Set<Element>()
+        return filter { set.insert($0).inserted }
+    }
+    
+    mutating func remove(_ element: Element) {
+        if let index = self.firstIndex(of: element) {
+            self.remove(at: index)
+        }
+    }
+    
+    func distance(of element: Element) -> Int? {
+        if let index = self.firstIndex(of: element) {
+            return self.distance(from: self.startIndex, to: index)
+        }
+        return nil
     }
 }
 
@@ -54,11 +74,4 @@ public extension ClosedRange where Bound == Unicode.Scalar {
     var scalars: [Unicode.Scalar]   { range.compactMap(Unicode.Scalar.init) }
     var characters: [Character]     { scalars.map(Character.init) }
     var string: String              { String(scalars) }
-}
-
-extension Sequence where Element: Hashable {
-    func dedupe() -> [Element] {
-        var set = Set<Element>()
-        return filter { set.insert($0).inserted }
-    }
 }
