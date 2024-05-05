@@ -16,13 +16,13 @@ extension PythonExample {
             self.dotIndex = dotIndex
         }
         
-        var allParsed: Bool {
+        var isHandle: Bool {
             dotIndex >= rhs.count
         }
         
         // represents the next symbol to parse
         var dotSymbol: String? {
-            rhs.indices.contains(dotIndex) ? rhs[dotIndex] : nil
+            isHandle ? nil : rhs[dotIndex]
         }
         
         func advanceDot(after sym: String) -> Rule? {
@@ -30,6 +30,10 @@ extension PythonExample {
                 Rule(lhs: lhs, rhs: rhs, dotIndex: dotIndex + 1) :
                 nil
             }
+        }
+        
+        func productionEqual(to other: Rule) -> Bool {
+            self.lhs == other.lhs && self.rhs == other.rhs
         }
     }
     
@@ -83,7 +87,7 @@ class PythonExample {
     let nonTerminals: [String]
     
     var states: [Int: ItemSet]
-    var table : [[String]]
+    var parsingTable: [Int: [String: String]]
     
     init(allRulesList: [Rule], terminals: [String], nonTerminals: [String]) {
         self.allRulesList = allRulesList
@@ -91,7 +95,7 @@ class PythonExample {
         self.terminals = terminals
         self.nonTerminals = nonTerminals
         self.states = [:]
-        self.table = []
+        self.parsingTable = [:]
     }
     
     func computeClosure(using kernelRules: [Rule]) -> ItemSet {
@@ -137,43 +141,31 @@ class PythonExample {
     }
     
     func createParseTable() {
-        // create rows and cols
         let rows = states.keys
         let cols = terminals + ["$"] + nonTerminals
         
         // create empty table
-        for _ in rows {
-            table.append([String](repeating: "", count: cols.count))
+        for i in rows {
+            parsingTable[i] = [:]
         }
         
         // make shift and GOTO entries in table
         for a in 0..<rows.count {
-            for (b, symbol) in cols.enumerated() {
+            for symbol in cols {
                 if let transitionState = states[a]?.transitions[symbol] {
-                    table[a][b] = "\(terminals.contains(symbol) ? "S" : "")\(transitionState)"
+                    parsingTable[a]![symbol] = "\(terminals.contains(symbol) ? "S" : "")\(transitionState)"
                 }
             }
         }
         
         // start REDUCE procedure
-        
         // find 'handle' items and calculate follow.
         for (stateno, state) in states {
-            for rule in state.rules {
-                if rule.allParsed {
-                    for (key, _) in allRulesList.enumerated() {
-                        if allRulesList[key].lhs == rule.lhs && allRulesList[key].rhs == rule.rhs {
-                            let follow_result = follow(nt: rule.lhs)
-                            for col in follow_result {
-                                let index = cols.distance(of: col)!
-                                if key == 0 {
-                                    table[stateno][index] = "Accept"
-                                } else {
-                                    table[stateno][index] = "R\(key)"
-                                }
-                            }
-                        }
-                    }
+            for handleRule in state.rules.filter(\.isHandle) {
+                let key = allRulesList.firstIndex(where: {$0.productionEqual(to: handleRule)})
+                let follow_result = follow(nt: handleRule.lhs)
+                for col in follow_result {
+                    parsingTable[stateno]![col] = key == 0 ? "Accept" : "R\(key!)"
                 }
             }
         }
@@ -239,7 +231,7 @@ class PythonExample {
         // condition for Non-Terminals
         
         var fres: [String] = []
-        let rhs_rules = allRulesList.filter{$0.lhs == rhs[0]}.compactMap{$0.rhs} // todo: infinite loop
+        let rhs_rules = allRulesList.filter{$0.lhs == rhs[0]}.compactMap{$0.rhs} 
         for itr in rhs_rules {
             fres.append(contentsOf: first(rhs: itr))
         }

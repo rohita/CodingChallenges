@@ -60,24 +60,31 @@ final class PythonExampleTests: XCTestCase {
         print(sb)
     }
     
-    func printTable(table: [[String]]) {
+    func printTable(table: [Int: [String: String]]) {
         let cols = term_userdef + ["$"] + nonterm_userdef
         let columnWidth = 5
         var headerRow = "State|"
-        for term in cols {
-            headerRow.append(String(format: " %-\(columnWidth)s", (term as NSString).utf8String!))
+        for symbol in cols {
+            headerRow.append(String(format: " %-\(columnWidth)s", (symbol as NSString).utf8String!))
         }
         
-        let tableWidth = (cols.count*columnWidth) + 10
+        let tableWidth = (cols.count*columnWidth) + 15
         var sb = "\n"
         sb.append(headerRow + "\n")
         sb.append(String(repeating: "-", count: tableWidth))
         sb.append("\n")
-        for (i, row) in table.enumerated() {
-            sb.append(String(format: "%4d |", i))
-            for cell in row {
-                sb.append(String(format: " %-\(columnWidth)s", (cell as NSString).utf8String!))
+        
+        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
+            sb.append(String(format: "%4d |", key))
+            
+            for symbol in cols {
+                if let action = value[symbol] {
+                    sb.append(String(format: " %-\(columnWidth)s", (action as NSString).utf8String!))
+                } else {
+                    sb.append(String(format: " %-\(columnWidth)s", (" " as NSString).utf8String!))
+                }
             }
+            
             sb.append("\n")
         }
         
@@ -111,29 +118,28 @@ final class PythonExampleTests: XCTestCase {
         p.createParseTable()
         
         print("\nSLR(1) parsing table:\n")
-        printTable(table: p.table)
-        
-        XCTAssertEqual(p.table, expectedTable())
+        printTable(table: p.parsingTable)
+        XCTAssertEqual(p.parsingTable, expectedTable())
     }
     
-    func expectedTable() -> [[String]] {
-        var table : [[String]] = []
-        for _ in 0..<12 {
-            table.append([String](repeating: "", count: 9))
+    func expectedTable() -> [Int: [String: String]] {
+        var table : [Int: [String: String]] = [:]
+        for i in 0..<12 {
+            table[i] = [:]
         }
         
-        table[0] = ["S5", "", "", "S4", "", "", "1", "2", "3"]
-        table[1] = ["", "S6", "", "", "", "Accept", "", "", ""]
-        table[2] = ["", "R2", "S7", "", "R2", "R2", "", "", ""]
-        table[3] = ["", "R4", "R4", "", "R4", "R4", "", "", ""]
-        table[4] = ["S5", "", "", "S4", "", "", "8", "2", "3"]
-        table[5] = ["", "R6", "R6", "", "R6", "R6", "", "", ""]
-        table[6] = ["S5", "", "", "S4", "", "", "", "9", "3"]
-        table[7] = ["S5", "", "", "S4", "", "", "", "", "10"]
-        table[8] = ["", "S6", "", "", "S11", "", "", "", ""]
-        table[9] = ["", "R1", "S7", "", "R1", "R1", "", "", ""]
-        table[10] = ["", "R3", "R3", "", "R3", "R3", "", "", ""]
-        table[11] = ["", "R5", "R5", "", "R5", "R5", "", "", ""]
+        table[0] = ["(": "S4", "T": "2", "id": "S5", "F": "3", "E": "1"]
+        table[1] = ["$": "Accept", "+": "S6"]
+        table[2] = ["*": "S7", "+": "R2", "$": "R2", ")": "R2"]
+        table[3] = ["*": "R4", "+": "R4", ")": "R4", "$": "R4"]
+        table[4] = ["id": "S5", "(": "S4", "E": "8", "T": "2", "F": "3"]
+        table[5] = ["$": "R6", "+": "R6", "*": "R6", ")": "R6"]
+        table[6] = ["T": "9", "(": "S4", "id": "S5", "F": "3"]
+        table[7] = ["id": "S5", "(": "S4", "F": "10"]
+        table[8] = ["+": "S6", ")": "S11"]
+        table[9] = [")": "R1", "$": "R1", "*": "S7", "+": "R1"]
+        table[10] = ["$": "R3", "*": "R3", "+": "R3", ")": "R3"]
+        table[11] = ["$": "R5", "+": "R5", ")": "R5", "*": "R5"]
     
         return table
     }
