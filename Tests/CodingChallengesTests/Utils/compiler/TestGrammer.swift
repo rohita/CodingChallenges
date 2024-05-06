@@ -28,7 +28,7 @@ public class TestGrammerLexer: Lexer {
     }
 }
 
-extension TestGrammerLexer.Token : Terminal {
+extension TestGrammerLexer.Token  {
     public init?(rawValue: Character) {
         self = .Character(rawValue)
     }
@@ -40,15 +40,15 @@ extension TestGrammerLexer.Token : Terminal {
         }
     }
     
-    public static var allCases: [TestGrammerLexer.Token] {
-        var returnVal: [TestGrammerLexer.Token] = []
-        ("a"..."c").characters.forEach { returnVal.append(.Character($0)) }
-        returnVal.append(.Literal("-"))
+    public static var allCases: [Terminal] {
+        var returnVal: [Terminal] = []
+        ("a"..."c").characters.forEach { returnVal.append(String($0)) }
+        returnVal.append("-")
         return returnVal
     }
 }
 
-public enum TestGrammerNonTerminal : String, NonTerminal {
+public enum TestGrammerNonTerminal : String {
     case S
     case TOKEN
     case CONT
@@ -56,6 +56,7 @@ public enum TestGrammerNonTerminal : String, NonTerminal {
 }
 
 public enum TestGrammerRule: Rules {
+    
     public static var allCases: [TestGrammerRule] {
         var returnVal: [TestGrammerRule] = []
         returnVal.append(.start)
@@ -66,8 +67,6 @@ public enum TestGrammerRule: Rules {
         return returnVal
     }
     
-    public typealias Term = TestGrammerLexer.Token
-    public typealias NTerm = TestGrammerNonTerminal
     public typealias Output = [Character]
     
     case start //  S -> S TOKEN
@@ -76,19 +75,19 @@ public enum TestGrammerRule: Rules {
     case contEmpty // CONT -> ε
     case char(Character) // CHAR -> a .. z A..Z 0..9
     
-    public static var goal : TestGrammerNonTerminal {.S} // Start symbol
+    public static var goal = "S" // Start symbol
     
     public var rule : Rule<TestGrammerRule> {
         switch self {
         case .start:
-            Rule(.S, expression: /.S, /.TOKEN) { values in
+            Rule(.nonTerm("S"), expression: .nonTerm("S"), .nonTerm("TOKEN")) { values in
                 var returnVal: [Character] = []
                 returnVal.append(contentsOf: values[0].nonTermValue!)
                 returnVal.append(contentsOf: values[1].nonTermValue!)
                 return returnVal
             }
         case .token:
-            Rule(.TOKEN, expression: /.CHAR, /.CONT) { values in
+            Rule(.nonTerm("TOKEN"), expression: .nonTerm("CHAR"), .nonTerm("CONT")) { values in
                 guard let start = values[0].nonTermValue!.first?.unicodeScalars.first?.value else {
                     return []
                 }
@@ -105,15 +104,15 @@ public enum TestGrammerRule: Rules {
                 return returnVal
             }
         case .cont:
-            Rule(.CONT, expression: /.Literal("-"), /.CHAR) { values in
+            Rule(.nonTerm("CONT"), expression: .term("-"), .nonTerm("CHAR")) { values in
                 values[1].nonTermValue!
             }
         case .contEmpty:
-            Rule(.CONT) { values in
+            Rule(.nonTerm("CONT")) { values in
                 []
             }
         case .char(let c):
-            Rule(.CHAR, expression: /.Character(c)) { _ in [c] }
+            Rule(.nonTerm("CHAR"), expression: .term(String(c))) { _ in [c] }
         }
     }
 }

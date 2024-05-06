@@ -13,19 +13,19 @@ import XCTest
 
 final class TG2ParserTests: XCTestCase {
     func testTG2() throws {
-        let parser = try Parser.LR0(rules: TG2Rules.self)
+        let parser = try Parser.LR0(rules: TG2Rules.self, terminals: TG2Term.allCases.map{$0.rawValue})
         print(parser)
-        let tokens: [TG2Term] = [.zero, .plus, .one, .plus, .one]
+        let tokens: [Terminal] = ["0", "+", "1", "+", "1"]
         print(try parser.parse(tokens: tokens) ?? "Error")
     }
 }
 
-enum TG2NonTerm : String, NonTerminal {
+enum TG2NonTerm : String {
     case E
     case B
 }
 
-enum TG2Term : Character, Terminal {
+enum TG2Term : String, CaseIterable {
     case zero = "0"
     case one = "1"
     case plus = "+"
@@ -33,8 +33,6 @@ enum TG2Term : Character, Terminal {
 }
 
 enum TG2Rules: Rules {
-    typealias Term = TG2Term
-    typealias NTerm = TG2NonTerm
     typealias Output = Int
     
     case eTimes
@@ -43,26 +41,26 @@ enum TG2Rules: Rules {
     case bZero
     case bOne
     
-    static var goal: TG2NonTerm {.E}
+    static var goal = "E"
     
     var rule: Rule<Self> {
         switch self {
         case .eTimes:
-            Rule(.E, expression: /.E, /.times, /.B) { values in
+            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term("*"), .nonTerm("B")) { values in
                 values[0].nonTermValue! * values[2].nonTermValue!
             }
         case .ePlus:
-            Rule(.E, expression: /.E, /.plus, /.B) { values in
+            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term("+"), .nonTerm("B")) { values in
                 values[0].nonTermValue! + values[2].nonTermValue!
             }
         case .eB:
-            Rule(.E, expression: /.B) { values in
+            Rule(.nonTerm("E"), expression: .nonTerm("B")) { values in
                 values[0].nonTermValue!
             }
         case .bZero:
-            Rule(.B, expression: /.zero) { _ in 0 }
+            Rule(.nonTerm("B"), expression: .term("0")) { _ in 0 }
         case .bOne:
-            Rule(.B, expression: /.one) { _ in 1 }
+            Rule(.nonTerm("B"), expression: .term("1")) { _ in 1 }
         }
     }
 }

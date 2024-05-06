@@ -4,16 +4,22 @@
 import Foundation
 import Collections
 
-extension PythonExample {
-    struct Rule: Hashable {
-        let lhs: String
-        let rhs: [String]
+extension SLR1 {
+    struct Item: Hashable {
+        var rule: Rule2<G>
         private let dotIndex : Int // represents the next position to parse
         
-        init(lhs: String, rhs: [String], dotIndex: Int = 0) {
-            self.lhs = lhs
-            self.rhs = rhs
+        init(rule: Rule2<G>, dotIndex: Int = 0) {
+            self.rule = rule
             self.dotIndex = dotIndex
+        }
+        
+        var lhs: String {
+            rule.lhs.debugDescription
+        }
+        
+        var rhs: [String] {
+            rule.rhs.map(\.debugDescription)
         }
         
         var isHandle: Bool {
@@ -25,81 +31,70 @@ extension PythonExample {
             isHandle ? nil : rhs[dotIndex]
         }
         
-        func advanceDot(after sym: String) -> Rule? {
+        func advanceDot(after sym: String) -> Item? {
             dotSymbol.flatMap{ $0 == sym ?
-                Rule(lhs: lhs, rhs: rhs, dotIndex: dotIndex + 1) :
+                Item(rule: rule, dotIndex: dotIndex + 1) :
                 nil
             }
         }
         
-        func productionEqual(to other: Rule) -> Bool {
-            self.lhs == other.lhs && self.rhs == other.rhs
+        func ruleEqual(to other: Item) -> Bool {
+            self.rule == other.rule
         }
     }
     
     struct ItemSet: Equatable {
-        let rules: [Rule]
+        let items: [Item]
         var transitions: [String: Int]
         
-        init(rules: [Rule], transitions: [String : Int] = [:]) {
-            self.rules = rules
+        init(items: [Item], transitions: [String : Int] = [:]) {
+            self.items = items
             self.transitions = transitions
         }
         
         var dotSymbols: OrderedSet<String> {
-            OrderedSet(rules.compactMap{$0.dotSymbol})
+            OrderedSet(items.compactMap{$0.dotSymbol})
         }
         
-        func rulesAfterParsing(_ symbol: String) -> [Rule] {
-            rules.compactMap{$0.advanceDot(after: symbol)}
+        var reduceRules: [Item] {
+            items.filter(\.isHandle)
+        }
+        
+        func getItemsByAdvancingDot(after symbol: String) -> [Item] {
+            items.compactMap{$0.advanceDot(after: symbol)}
         }
         
         static func == (lhs: ItemSet, rhs: ItemSet) -> Bool {
-            lhs.rules == rhs.rules
+            lhs.items == rhs.items
         }
     }
     
-    static func grammarAugmentation(rules: [String], startSymbol: String) -> [Rule] {
-        var runningRulesList: [Rule] = []
-        let newStartSymbol = startSymbol + "'"  // create unique 'symbol' to represent new start symbol
-        runningRulesList.append(Rule(lhs: newStartSymbol, rhs: [startSymbol])) // adding rule to bring start symbol to RHS
-        
-        for rule in rules {
-            let k = rule.split("->") // split LHS from RHS
-            let lhs = k[0].strip()
-            let multiRhs = k[1].strip()
-            let rhsList = multiRhs.split("|")
-            
-            for rhs in rhsList {
-                let rhsSymbols = rhs.strip().split()
-                runningRulesList.append(Rule(lhs: lhs, rhs: rhsSymbols)) // Adds dot pointer at start of RHS
-            }
-        }
+    static func augmentedGrammar() -> [Item] {
+        var runningRulesList: [Item] = []
+        let newStartSymbol = G.startSymbol + "'"  // create unique 'symbol' to represent new start symbol
+        runningRulesList.append(Item(rule: Rule2(lhs: newStartSymbol, rhs: [G.startSymbol]))) // adding rule to bring start symbol to RHS
+        runningRulesList.append(contentsOf: G.rules.map{Item(rule: $0)})
         return runningRulesList
     }
 }
 
-class PythonExample {
+class SLR1<G: Grammar> {
     let EPSILON = "#"
-    let allRulesList: [Rule]
+    let allRulesList: [Item]
     let startSymbol: String
-    let terminals: [String]
-    let nonTerminals: [String]
     
     var states: [Int: ItemSet]
     var parsingTable: [Int: [String: String]]
     
-    init(allRulesList: [Rule], terminals: [String], nonTerminals: [String]) {
+    init(allRulesList: [Item]) {
         self.allRulesList = allRulesList
         self.startSymbol = allRulesList[0].lhs
-        self.terminals = terminals
-        self.nonTerminals = nonTerminals
         self.states = [:]
         self.parsingTable = [:]
     }
     
-    func computeClosure(using kernelRules: [Rule]) -> ItemSet {
-        var runningClosureSet = OrderedSet(kernelRules)
+    func computeClosure(using kernelItems: [Item]) -> ItemSet {
+        var runningClosureSet = OrderedSet(kernelItems)
         var prevLen = -1
         while prevLen != runningClosureSet.count {
             prevLen = runningClosureSet.count
@@ -108,7 +103,7 @@ class PythonExample {
             runningClosureSet.append(contentsOf: newClosureRules)
         }
 
-        return ItemSet(rules: runningClosureSet.elements)
+        return ItemSet(items: runningClosureSet.elements)
     }
     
     func generateStates(startingState: ItemSet) {
@@ -131,7 +126,7 @@ class PythonExample {
     
     private func computeTransitions(from state: Int) {
         for transitionSymbol in states[state]!.dotSymbols {
-            let newStateKernelRules = states[state]!.rulesAfterParsing(transitionSymbol)
+            let newStateKernelRules = states[state]!.getItemsByAdvancingDot(after: transitionSymbol)
             let newStateItemSet = computeClosure(using: newStateKernelRules)
             let newStateNum = states.first{$0.value == newStateItemSet}?.key ?? states.count
             
@@ -142,7 +137,7 @@ class PythonExample {
     
     func createParseTable() {
         let rows = states.keys
-        let cols = terminals + ["$"] + nonTerminals
+        let cols = G.terminals + ["$"] + G.nonTerminals
         
         // create empty table
         for i in rows {
@@ -153,7 +148,7 @@ class PythonExample {
         for a in 0..<rows.count {
             for symbol in cols {
                 if let transitionState = states[a]?.transitions[symbol] {
-                    parsingTable[a]![symbol] = "\(terminals.contains(symbol) ? "S" : "")\(transitionState)"
+                    parsingTable[a]![symbol] = "\(G.terminals.contains(symbol) ? "S" : "")\(transitionState)"
                 }
             }
         }
@@ -161,11 +156,11 @@ class PythonExample {
         // start REDUCE procedure
         // find 'handle' items and calculate follow.
         for (stateno, state) in states {
-            for handleRule in state.rules.filter(\.isHandle) {
-                let key = allRulesList.firstIndex(where: {$0.productionEqual(to: handleRule)})
-                let follow_result = follow(nt: handleRule.lhs)
-                for col in follow_result {
-                    parsingTable[stateno]![col] = key == 0 ? "Accept" : "R\(key!)"
+            for reduceRule in state.reduceRules {
+                let ruleId = allRulesList.firstIndex(where: {$0.ruleEqual(to: reduceRule)})
+                let followResult = follow(nt: reduceRule.lhs)
+                for col in followResult {
+                    parsingTable[stateno]![col] = ruleId == 0 ? "Accept" : "R\(ruleId!)"
                 }
             }
         }
@@ -173,7 +168,7 @@ class PythonExample {
     
     // Set of terminals that can appear immediately
     // to the right of Non-Terminal
-    func follow(nt: String) -> [String] {
+    private func follow(nt: String) -> [String] {
         var solset = OrderedSet<String>()
         if nt == startSymbol {
             solset.append("$")
@@ -218,13 +213,13 @@ class PythonExample {
     
     // Set of terminals that can appear immediately
     // after a given non-terminal in a grammar.
-    func first(rhs: [String]) -> [String] {
+    private func first(rhs: [String]) -> [String] {
         if rhs.isEmpty {
             return []
         }
         
         // recursion base condition for terminal or epsilon
-        if (terminals.contains(rhs[0]) || rhs[0] == EPSILON) {
+        if (G.terminals.contains(rhs[0]) || rhs[0] == EPSILON) {
             return [rhs[0]]
         }
         
@@ -253,7 +248,7 @@ class PythonExample {
         
 }
 
-extension PythonExample.Rule: CustomDebugStringConvertible {
+extension SLR1.Item: CustomDebugStringConvertible {
     var debugDescription: String {
         var sb = "\(lhs) -> "
         for i in 0..<rhs.count {

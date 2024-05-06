@@ -2,12 +2,12 @@ import XCTest
 @testable import CodingChallenges
 
 final class PythonExampleTests: XCTestCase {
-    let rules = ["E -> E + T | T",
-                 "T -> T * F | F",
-                 "F -> ( E ) | id"
-    ]
-    let nonterm_userdef = ["E", "T", "F"]
-    let term_userdef = ["id", "+", "*", "(", ")"]
+//    let rules = ["E -> E + T | T",
+//                 "T -> T * F | F",
+//                 "F -> ( E ) | id"
+//    ]
+//    let nonterm_userdef = ["E", "T", "F"]
+//    let term_userdef = ["id", "+", "*", "(", ")"]
     
 //    let rules = ["S -> S T | T",
 //                 "T -> C - C | C",
@@ -15,25 +15,43 @@ final class PythonExampleTests: XCTestCase {
 //    ]
 //    let nonterm_userdef = ["S", "T", "C"]
 //    let term_userdef = ["-", "a", "b", "c"]
+    
+    final class PythonRules: Grammar {
+        typealias Output = String
+        static var startSymbol = "E"
+        static var nonTerminals = ["E", "T", "F"]
+        static var terminals = ["id", "+", "*", "(", ")"]
+        
+        static var rules: [CodingChallenges.Rule2<PythonExampleTests.PythonRules>] {
+            [Rule2("E -> E + T"),
+             Rule2("E -> T"),
+             Rule2("T -> T * F"),
+             Rule2("T -> F"),
+             Rule2("F -> ( E )"),
+             Rule2("F -> id"),
+            ]
+        }
+    }
+    
 
     func printRules() {
         print("\nOriginal grammar input:\n")
-        for y in rules {
+        for y in PythonRules.rules {
             print(y)
         }
     }
     
-    func printResult(rules: [PythonExample.Rule]) {
+    func printResult(rules: [SLR1<PythonRules>.Item]) {
         for rule in rules {
             print("\(rule)")
         }
     }
     
-    func printStateTransitions(stateMap: [Int: PythonExample.ItemSet]) {
+    func printStateTransitions(stateMap: [Int: SLR1<PythonRules>.ItemSet]) {
         let numRows = stateMap.keys.count
         let columnWidth = 5
         var rows = [String](repeating: "", count: numRows)
-        let columnHeaders = term_userdef + nonterm_userdef
+        let columnHeaders = PythonRules.terminals + PythonRules.nonTerminals
         
         var headerRow = "State|"
         for term in columnHeaders {
@@ -61,7 +79,7 @@ final class PythonExampleTests: XCTestCase {
     }
     
     func printTable(table: [Int: [String: String]]) {
-        let cols = term_userdef + ["$"] + nonterm_userdef
+        let cols = PythonRules.terminals + ["$"] + PythonRules.nonTerminals
         let columnWidth = 5
         var headerRow = "State|"
         for symbol in cols {
@@ -94,21 +112,21 @@ final class PythonExampleTests: XCTestCase {
     
     func testPrintGrammer() throws {
         printRules()
-        let augmentedRules = PythonExample.grammarAugmentation(rules: rules, startSymbol: nonterm_userdef[0])
-        let p = PythonExample(allRulesList: augmentedRules, terminals: term_userdef, nonTerminals: nonterm_userdef)
+        let augmentedRules = SLR1<PythonRules>.augmentedGrammar()
+        let p = SLR1<PythonRules>(allRulesList: augmentedRules)
         
         print("\nGrammar after Augmentation: \n")
         printResult(rules: augmentedRules)
         
         print("\nCalculated closure: I0\n")
         let I0 = p.computeClosure(using: [p.allRulesList[0]])
-        printResult(rules: I0.rules)
+        printResult(rules: I0.items)
         
         p.generateStates(startingState: I0)
         print("\nStates Generated: \n")
         for st in p.states.sorted(by: { $0.key < $1.key }) {
             print("State = I\(st.key)")
-            printResult(rules: st.value.rules)
+            printResult(rules: st.value.items)
             print()
         }
         
