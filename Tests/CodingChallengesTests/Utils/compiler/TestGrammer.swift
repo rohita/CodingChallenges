@@ -5,53 +5,36 @@ import CodingChallenges
  
  ```
  S -> S TOKEN
- TOKEN -> CHAR CONT
- CONT -> - CHAR | ε
+ TOKEN -> CHAR - CHAR
+ TOKEN -> CHAR
  CHAR -> a | b | c | d
  ```
  */
 
 public class TestGrammerLexer: Lexer {
-    public enum Token: Hashable, Equatable {
-        case Character(Character)
-        case Literal(Character)
+    public enum Types: String, TokenType {
+        case Character = "CHAR"
+        case Dash = "-"
+        case Unrecognized
     }
     
-    public var tokenRules: [(String, (String) -> Token?)] {
+    public var tokenRules: [(String, (String) -> Token<Types>?)] {
         [
-            ("[A-Za-z0-9]", { .Character(Character($0)) }),
+            ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
         ]
     }
     
-    public func literal(_ c: String) -> Token {
-        .Literal(Character(c))
-    }
-}
-
-extension TestGrammerLexer.Token  {
-    public init?(rawValue: Character) {
-        self = .Character(rawValue)
-    }
-    
-    public var rawValue: Character {
-        switch self {
-        case .Character(let char): char
-        case .Literal(let char): char
+    public func literal(_ c: String) -> Token<Types> {
+        guard c == "-" else {
+            return Token(.Unrecognized, value: c)
         }
-    }
-    
-    public static var allCases: [Terminal] {
-        var returnVal: [Terminal] = []
-        ("a"..."c").characters.forEach { returnVal.append(String($0)) }
-        returnVal.append("-")
-        return returnVal
+        return Token(.Dash)
     }
 }
 
-public enum TestGrammerNonTerminal : String {
+public enum TestGrammerNonTerminal: String {
     case S
     case TOKEN
-    case CONT
     case CHAR
 }
 

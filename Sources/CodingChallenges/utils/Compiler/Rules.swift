@@ -12,8 +12,6 @@ import Foundation
 // TODO: Change to String
 //public protocol Terminal: RawRepresentable, CaseIterable, Hashable, CustomDebugStringConvertible where RawValue == Character {}
 //public protocol NonTerminal: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
-public typealias Terminal = String
-public typealias NonTerminal = String
 
 // Grammer symbols that can hold terminals and non-terminals
 // It's interesting how Swift uses Enums for polymorphism.
@@ -30,11 +28,11 @@ public enum Symbol: Hashable, CustomDebugStringConvertible {
 }
 
 public enum SymbolValue<R: Rules> {
-    case term(Terminal)
+    case term(String)
     case nonTerm(R.Output)
     case eof
     
-    public var termValue: Terminal? {
+    public var termValue: String? {
         switch self {
         case .term(let c): c
         default: nil
@@ -88,6 +86,6 @@ public protocol Rules: CaseIterable, Hashable {
 //    associatedtype NTerm : NonTerminal
     associatedtype Output
 
-    static var goal: NonTerminal { get }  // Goal is the start symbol of the grammer
+    static var goal: String { get }  // Goal is the start symbol of the grammer
     var rule: Rule<Self> { get } // Implemented as switch statement for rules cases
 }

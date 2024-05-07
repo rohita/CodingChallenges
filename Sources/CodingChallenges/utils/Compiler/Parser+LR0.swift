@@ -18,7 +18,7 @@ fileprivate struct Item1<R : Rules>: GraphNode {
     let all : [Symbol] // rhs of the rule
     let ptr : Int // represents the 'dot', next position to parse
     
-    func getEdges() -> OrderedDictionary<NonTerminal, [Item1<R>]> {
+    func getEdges() -> OrderedDictionary<String, [Item1<R>]> {
         
         // we can reach any "unparsed" rule beginning with
         // the next symbol, provided the symbol is a non-terminal
@@ -109,10 +109,10 @@ fileprivate struct ItemSet<R : Rules>: GraphNode {
 }
 
 fileprivate struct ItemSetTable<R : Rules> {
-    let allTerminals: [Terminal]
+    let allTerminals: [String]
     let graph : EdgeLabledGraph<ItemSet<R>>
     
-    init(rules: R.Type, allTerminals: [Terminal]) throws {
+    init(rules: R.Type, allTerminals: [String]) throws {
         self.allTerminals = allTerminals
         // our initial state is the augmented rule, tagged by nil
         let augmentedRule = Item1<R>(rule: nil,
@@ -124,12 +124,12 @@ fileprivate struct ItemSetTable<R : Rules> {
         graph = try EdgeLabledGraph(seeds: [itemSet0])
     }
     
-    func actionTable() throws -> [Terminal? : [Int : Action<R>]] {
+    func actionTable() throws -> [String? : [Int : Action<R>]] {
         
         // shifts
         
         let keyAndVals = graph.edges
-            .compactMap {(key : Symbol, vals : [Int : [Int]]) -> (Terminal, [Int : Action<R>])? in
+            .compactMap {(key : Symbol, vals : [Int : [Int]]) -> (String, [Int : Action<R>])? in
                 guard case .term(let t) = key else {
                     return nil
                 }
@@ -140,7 +140,7 @@ fileprivate struct ItemSetTable<R : Rules> {
                 return (t, dict)
             }
         
-        var dict = Dictionary(uniqueKeysWithValues: keyAndVals) as [Terminal? : [Int : Action<R>]]
+        var dict = Dictionary(uniqueKeysWithValues: keyAndVals) as [String? : [Int : Action<R>]]
         
         for start in graph.nodes.indices { // for every state/itemset
             
@@ -178,7 +178,7 @@ fileprivate struct ItemSetTable<R : Rules> {
         return dict
     }
     
-    var gotoTable : [NonTerminal : [Int : Int]] {
+    var gotoTable : [String : [Int : Int]] {
         Dictionary(uniqueKeysWithValues: graph.edges.compactMap{(key : Symbol, vals : [Int : [Int]]) in
             guard case .nonTerm(let nT) = key else {return nil}
             return (nT, vals.mapValues{ints in
@@ -191,7 +191,7 @@ fileprivate struct ItemSetTable<R : Rules> {
 }
 
 public extension Parser {
-    static func LR0(rules: R.Type, terminals: [Terminal]) throws -> Self {
+    static func LR0(rules: R.Type, terminals: [String]) throws -> Self {
         let table = try ItemSetTable(rules: rules, allTerminals: terminals)
         return Parser(actions: try table.actionTable(), gotos: table.gotoTable)
     }

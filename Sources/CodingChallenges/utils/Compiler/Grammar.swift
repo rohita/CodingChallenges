@@ -9,7 +9,7 @@ public protocol Grammar {
     static var rules: [Rule2<Self>] { get }
 }
 
-public struct Rule2<R : Grammar>: Hashable {
+public struct Rule2<G : Grammar>: Hashable {
     public let lhs : Symbol
     public let rhs : [Symbol]
     
@@ -29,7 +29,7 @@ public struct Rule2<R : Grammar>: Hashable {
     public init(lhs: String, rhs: [String]) {
         self.lhs = .nonTerm(lhs)
         self.rhs = rhs.map{ str in
-            if R.terminals.contains(str) {
+            if G.terminals.contains(str) {
                 return .term(str)
             } else {
                 return .nonTerm(str)
@@ -42,7 +42,7 @@ public struct Rule2<R : Grammar>: Hashable {
         self.lhs = .nonTerm(k[0].strip())
         let rhsSymbols = k[1].strip()
         self.rhs = rhsSymbols.split().map{ str in
-            if R.terminals.contains(str) {
+            if G.terminals.contains(str) {
                 return .term(str)
             } else {
                 return .nonTerm(str)
@@ -53,7 +53,7 @@ public struct Rule2<R : Grammar>: Hashable {
     // TODO: init with no production, but default production is AST
     
     
-    public static func == (lhs: Rule2<R>, rhs: Rule2<R>) -> Bool {
+    public static func == (lhs: Rule2<G>, rhs: Rule2<G>) -> Bool {
         lhs.lhs == rhs.lhs && lhs.rhs == rhs.rhs
     }
     

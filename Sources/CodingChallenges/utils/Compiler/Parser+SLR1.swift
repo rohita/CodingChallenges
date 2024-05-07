@@ -76,6 +76,8 @@ extension SLR1 {
         runningRulesList.append(contentsOf: G.rules.map{Item(rule: $0)})
         return runningRulesList
     }
+    
+
 }
 
 class SLR1<G: Grammar> {

@@ -10,6 +10,27 @@
 
 import Foundation
 
+/** Representation of a single token */
+public protocol TokenType: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
+public struct Token<T: TokenType>: Equatable, CustomDebugStringConvertible {
+    public var type: T
+    public var value: String
+    
+    public init(_ type: T, value: String) {
+        self.type = type
+        self.value = value
+    }
+    
+    public init(_ type: T) {
+        self.type = type
+        self.value = type.rawValue
+    }
+    
+    public var debugDescription: String {
+        "\(type)=\(value)"
+    }
+}
+
 /**
  In the lexical analysis phase, we simply try to break up the input
  (source code) into the small units called lexemes. These units carry
@@ -19,9 +40,7 @@ import Foundation
  specified by a collection of regular expression rules.
  */
 public protocol Lexer {
-    /** Representation of a single token */
-    associatedtype Token //: Terminal
-    
+    associatedtype Types: TokenType
     /**
      For each token, we need a regular expression capable of matching its
      corresponding lexeme. Then, we need to generate the token that matches
@@ -31,14 +50,14 @@ public protocol Lexer {
      to match at the beginning of the context and the second parameter is a
      closure that will generate the relevant token.
     */
-    var tokenRules: [(String, (String) -> Token?)] { get }
+    var tokenRules: [(String, (String) -> Token<Types>?)] { get }
     
     /**
      A literal character is a single character that is returned “as is”
      when encountered by the lexer. Literals are checked after all of
      the defined regular expression rules.
     */
-    func literal(_ : String) -> Token
+    func literal(_ : String) -> Token<Types>
 }
 
 extension Lexer {
@@ -48,8 +67,8 @@ extension Lexer {
      to interpret the code in any way. We just want to identify different
      parts of the source and label them.
      */
-    public func tokenize(_ input: String) -> [Token] {
-        var tokens = [Token]()
+    public func tokenize(_ input: String) -> [Token<Types>] {
+        var tokens = [Token<Types>]()
         var content = input
         
         while (content.count > 0) {

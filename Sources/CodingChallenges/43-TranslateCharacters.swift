@@ -5,21 +5,23 @@
 import Foundation
 
 class TRLexer: Lexer {
-    public enum Token: Hashable, Equatable {
-        case Digit
-        case Character(Character)
-        case Literal(String)
-    }
+    typealias Types = TokenTypes
     
-    var tokenRules: [(String, (String) -> Token?)] {
+    enum TokenTypes: String, TokenType {
+        case Digit
+        case Character
+        case Literal
+    }
+
+    var tokenRules: [(String, (String) -> Token<Types>?)] {
         [
-            ("digit", { _ in .Digit }),
-            ("[A-Za-z0-9]", { .Character(Character($0)) }),
+            ("digit", {_ in Token(.Digit) }),
+            ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
         ]
     }
     
-    func literal(_ c: String) -> Token {
-        .Literal(c)
+    func literal(_ c: String) -> Token<Types> {
+        Token(.Literal, value: c)
     }
 }
 
@@ -42,7 +44,7 @@ class TRLexer: Lexer {
  ```
  */
 
-class TRParser: CCParser<TRLexer.Token> {
+class TRParser: CCParser<TRLexer.Types> {
     func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()
         
@@ -64,8 +66,9 @@ class TRParser: CCParser<TRLexer.Token> {
         guard tokensAvailable else {
             return lhs
         }
-
-        guard case TRLexer.Token.Literal("-") = popCurrentToken() else {
+        
+        // case TRLexer.Types.Literal("-") =
+        guard popCurrentToken() == Token(.Literal, value: "-") else {
             throw ParseError.UnexpectedToken
         }
 
@@ -75,10 +78,12 @@ class TRParser: CCParser<TRLexer.Token> {
     }
     
     func parseCharacter() throws -> CharacterNode {
-        guard case let TRLexer.Token.Character(name) = popCurrentToken() else {
+        // case let TRLexer.Token.Character(name) =
+        let char = popCurrentToken()
+        guard char.type == .Character else {
             throw ParseError.ExpectedCharacter
         }
-        return CharacterNode(name: name)
+        return CharacterNode(name: Character(char.value))
     }
     
     override func parse() throws -> any AbstractSyntaxTree {

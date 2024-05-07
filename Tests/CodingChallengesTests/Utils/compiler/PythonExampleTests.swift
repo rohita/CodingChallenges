@@ -161,4 +161,14 @@ final class PythonExampleTests: XCTestCase {
     
         return table
     }
+    
+    
+    enum tokens: String  {
+        case Char, ALNUM, ALPHA, BLANK, CNTRL, DIGIT, LOWER, PRINT, PUNCT, RUNE, SPACE, SPECIAL, UPPER
+    }
+    
+    func testTokensEnum() {
+        print(tokens.ALNUM.rawValue)
+        print(tokens.Char.rawValue)
+    }
 }

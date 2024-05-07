@@ -4,7 +4,7 @@ import XCTest
 final class ParserTests: XCTestCase {
     func testGrammerLexerRange() throws {
         let charStream = "A-Z"
-        let expected: [TestGrammerLexer.Token] = [.Character("A"), .Literal("-"), .Character("Z")]
+        let expected: [Token<TestGrammerLexer.Types>] = [Token(.Character, value: "A"), Token(.Dash, value: "-"), Token(.Character, value: "Z")]
         let lexer = TestGrammerLexer()
         let result = lexer.tokenize(charStream)
         XCTAssertEqual(expected, result)
@@ -12,7 +12,7 @@ final class ParserTests: XCTestCase {
     
     func testGrammerLexerChar() throws {
         let charStream = "AZ"
-        let expected: [TestGrammerLexer.Token] = [.Character("A"), .Character("Z")]
+        let expected: [Token<TestGrammerLexer.Types>] = [Token(.Character, value: "A"), Token(.Character, value: "Z")]
         let lexer = TestGrammerLexer()
         let result = lexer.tokenize(charStream)
         XCTAssertEqual(expected, result)
@@ -21,9 +21,9 @@ final class ParserTests: XCTestCase {
     func testSingleChar() throws {
         let lexer = TestGrammerLexer()
         let tokens = lexer.tokenize("a")
-        let parser = try Parser.LR0(rules: TestGrammerRule.self, terminals: TestGrammerLexer.Token.allCases)
+        let parser = try Parser.LR0(rules: TestGrammerRule.self, terminals: TestGrammerLexer.Types.allCases.map(\.rawValue))
         print(parser)
-        print(try parser.parse(tokens: tokens.map{String($0.rawValue)}) ?? "Error")
+        print(try parser.parse(tokens: tokens.map(\.value)) ?? "Error")
     }
 }
 

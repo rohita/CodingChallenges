@@ -18,9 +18,9 @@ public enum Action<R : Rules> : Equatable {
 
 enum ParserError<R : Rules>: Error {
     case undefinedState
-    case noAction(token: Terminal?, state: Int)
-    case invalidToken(token: Terminal?)
-    case noGoto(nonTerm: NonTerminal, state: Int)
+    case noAction(token: String?, state: Int)
+    case invalidToken(token: String?)
+    case noGoto(nonTerm: String, state: Int)
     case shiftReduceConflict
     case reduceReduceConflict(matching: [R])
     case acceptConflict
@@ -80,19 +80,19 @@ public struct Parser<R : Rules> {
     
     // The action table is indexed by the current token and top-of-stack state, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
-    public let actions : [Terminal? : [Int : Action<R>]]
+    public let actions : [String? : [Int : Action<R>]]
     
     // The goto table is used during a reduce action.
     // gotos happen for each recognized rule
-    public let gotos : [NonTerminal : [Int : Int]]
+    public let gotos : [String : [Int : Int]]
     
-    public init(actions: [Terminal? : [Int : Action<R>]], gotos: [NonTerminal : [Int : Int]]) {
+    public init(actions: [String? : [Int : Action<R>]], gotos: [String : [Int : Int]]) {
         self.actions = actions
         self.gotos = gotos
     }
     
     // These input tokens are coming from the Lexer
-    func parse(tokens: [Terminal]) throws -> R.Output? {
+    func parse(tokens: [String]) throws -> R.Output? {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()

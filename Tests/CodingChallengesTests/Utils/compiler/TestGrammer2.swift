@@ -15,7 +15,7 @@ final class TG2ParserTests: XCTestCase {
     func testTG2() throws {
         let parser = try Parser.LR0(rules: TG2Rules.self, terminals: TG2Term.allCases.map{$0.rawValue})
         print(parser)
-        let tokens: [Terminal] = ["0", "+", "1", "+", "1"]
+        let tokens: [String] = ["0", "+", "1", "+", "1"]
         print(try parser.parse(tokens: tokens) ?? "Error")
     }
 }
