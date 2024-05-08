@@ -6,20 +6,20 @@ import Collections
 
 extension SLR1 {
     struct Item: Hashable {
-        var rule: Rule2<G>
+        var rule: Rule<G>
         private let dotIndex : Int // represents the next position to parse
         
-        init(rule: Rule2<G>, dotIndex: Int = 0) {
+        init(rule: Rule<G>, dotIndex: Int = 0) {
             self.rule = rule
             self.dotIndex = dotIndex
         }
         
         var lhs: String {
-            rule.lhs.debugDescription
+            rule.lhs.name
         }
         
         var rhs: [String] {
-            rule.rhs.map(\.debugDescription)
+            rule.rhs.map(\.name)
         }
         
         var isHandle: Bool {
@@ -72,7 +72,7 @@ extension SLR1 {
     static func augmentedGrammar() -> [Item] {
         var runningRulesList: [Item] = []
         let newStartSymbol = G.startSymbol + "'"  // create unique 'symbol' to represent new start symbol
-        runningRulesList.append(Item(rule: Rule2(lhs: newStartSymbol, rhs: [G.startSymbol]))) // adding rule to bring start symbol to RHS
+        runningRulesList.append(Item(rule: Rule(lhs: newStartSymbol, rhs: [G.startSymbol]))) // adding rule to bring start symbol to RHS
         runningRulesList.append(contentsOf: G.rules.map{Item(rule: $0)})
         return runningRulesList
     }

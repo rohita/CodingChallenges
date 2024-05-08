@@ -9,27 +9,23 @@
 
 import Foundation
 
-// TODO: Change to String
-//public protocol Terminal: RawRepresentable, CaseIterable, Hashable, CustomDebugStringConvertible where RawValue == Character {}
-//public protocol NonTerminal: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
-
 // Grammer symbols that can hold terminals and non-terminals
 // It's interesting how Swift uses Enums for polymorphism.
-public enum Symbol: Hashable, CustomDebugStringConvertible {
-    case term(String)
+public enum Symbol<G: Grammar>: Hashable {
+    case term(G.Terminal)
     case nonTerm(String)
     
-    public var debugDescription: String {
+    public var name: String {
         switch self {
-        case .term(let t): t
+        case .term(let t): t.rawValue
         case .nonTerm(let nt): nt
         }
     }
 }
 
-public enum SymbolValue<R: Rules> {
-    case term(String)
-    case nonTerm(R.Output)
+public enum SymbolValue<G: Grammar> {
+    case term(String)  // TODO: Replace with Token
+    case nonTerm(G.Output)
     case eof
     
     public var termValue: String? {
@@ -39,7 +35,7 @@ public enum SymbolValue<R: Rules> {
         }
     }
     
-    public var nonTermValue: R.Output? {
+    public var nonTermValue: G.Output? {
         switch self {
         case .nonTerm(let output): output
         default: nil
@@ -47,45 +43,5 @@ public enum SymbolValue<R: Rules> {
     }
 }
 
-// This encodes what a rule "does"
-public struct Rule<R : Rules>: Hashable {
-    public let lhs : Symbol
-    public let rhs : [Symbol]
-    
-    /*
-     For terminals (lexer tokens), the value of the corresponding input symbol is the same
-     as the value assigned to tokens in the lexer module. For non-terminals, the input
-     value is whatever was returned by the production defined for its rule.
-     */
-    public let production: ([SymbolValue<R>]) -> R.Output
-    
-    public init(_ lhs: Symbol, expression rhs: Symbol..., production: @escaping ([SymbolValue<R>]) -> R.Output) {
-        self.lhs = lhs
-        self.rhs = rhs
-        self.production = production
-    }
-    
-    // TODO: init with no production, but default production is AST
-    
-    
-    public static func == (lhs: Rule<R>, rhs: Rule<R>) -> Bool {
-        lhs.lhs == rhs.lhs && lhs.rhs == rhs.rhs
-    }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(lhs)
-        hasher.combine(rhs)
-    }
-}
 
-// Rules Enum. All rules will be cases in this Enum.
-// It's interesting how Swift is also uses Enums as collection
-// See examples in ParserTests file
-public protocol Rules: CaseIterable, Hashable {
-//    associatedtype Term : Terminal
-//    associatedtype NTerm : NonTerminal
-    associatedtype Output
 
-    static var goal: String { get }  // Goal is the start symbol of the grammer
-    var rule: Rule<Self> { get } // Implemented as switch statement for rules cases
-}

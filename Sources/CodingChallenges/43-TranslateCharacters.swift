@@ -4,24 +4,20 @@
 
 import Foundation
 
-class TRLexer: Lexer {
-    typealias Types = TokenTypes
+final class TRLexer: Lexer {
+    typealias TokenType = TokenTypes
     
-    enum TokenTypes: String, TokenType {
+    enum TokenTypes: String, SymbolIdentifer {
         case Digit
         case Character
         case Literal
     }
 
-    var tokenRules: [(String, (String) -> Token<Types>?)] {
+    var tokenRules: [(String, (String) -> Token<TRLexer>?)] {
         [
             ("digit", {_ in Token(.Digit) }),
             ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
         ]
-    }
-    
-    func literal(_ c: String) -> Token<Types> {
-        Token(.Literal, value: c)
     }
 }
 
@@ -44,7 +40,7 @@ class TRLexer: Lexer {
  ```
  */
 
-class TRParser: CCParser<TRLexer.Types> {
+class TRParser: CCParser<TRLexer> {
     func parseExpression() throws -> any AbstractSyntaxTree {
         let range = try parseRange()
         

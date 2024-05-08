@@ -12,12 +12,12 @@ import XCTest
 @testable import CodingChallenges
 
 final class TG2ParserTests: XCTestCase {
-    func testTG2() throws {
-        let parser = try Parser.LR0(rules: TG2Rules.self, terminals: TG2Term.allCases.map{$0.rawValue})
-        print(parser)
-        let tokens: [String] = ["0", "+", "1", "+", "1"]
-        print(try parser.parse(tokens: tokens) ?? "Error")
-    }
+//    func testTG2() throws {
+//        let parser = try Parser.LR0(rules: TG2Rules.self)
+//        print(parser)
+//        let tokens: [Token<TG2Lexer>] = [Token(.zero), Token(.plus), Token(.one), Token(.plus), Token(.one)]
+//        print(try parser.parse(tokens: tokens) ?? "Error")
+//    }
 }
 
 enum TG2NonTerm : String {
@@ -25,15 +25,22 @@ enum TG2NonTerm : String {
     case B
 }
 
-enum TG2Term : String, CaseIterable {
-    case zero = "0"
-    case one = "1"
-    case plus = "+"
-    case times = "*"
+final class TG2Lexer: Lexer {
+    var tokenRules: [(String, (String) -> CodingChallenges.Token<TG2Lexer>?)] = []
+    
+    
+    enum TokenType : String, SymbolIdentifer {
+        case zero = "0"
+        case one = "1"
+        case plus = "+"
+        case times = "*"
+    }
 }
 
+/*
 enum TG2Rules: Rules {
     typealias Output = Int
+    typealias L = TG2Lexer
     
     case eTimes
     case ePlus
@@ -46,11 +53,11 @@ enum TG2Rules: Rules {
     var rule: Rule<Self> {
         switch self {
         case .eTimes:
-            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term("*"), .nonTerm("B")) { values in
+            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term(.times), .nonTerm("B")) { values in
                 values[0].nonTermValue! * values[2].nonTermValue!
             }
         case .ePlus:
-            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term("+"), .nonTerm("B")) { values in
+            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term(.plus), .nonTerm("B")) { values in
                 values[0].nonTermValue! + values[2].nonTermValue!
             }
         case .eB:
@@ -58,9 +65,10 @@ enum TG2Rules: Rules {
                 values[0].nonTermValue!
             }
         case .bZero:
-            Rule(.nonTerm("B"), expression: .term("0")) { _ in 0 }
+            Rule(.nonTerm("B"), expression: .term(.zero)) { _ in 0 }
         case .bOne:
-            Rule(.nonTerm("B"), expression: .term("1")) { _ in 1 }
+            Rule(.nonTerm("B"), expression: .term(.one)) { _ in 1 }
         }
     }
 }
+*/

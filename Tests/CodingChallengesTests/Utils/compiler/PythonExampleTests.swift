@@ -16,19 +16,27 @@ final class PythonExampleTests: XCTestCase {
 //    let nonterm_userdef = ["S", "T", "C"]
 //    let term_userdef = ["-", "a", "b", "c"]
     
+    enum PythonRulesTerminals : String, SymbolIdentifer {
+        case id = "id"
+        case plus = "+"
+        case times = "*"
+        case ParensOpen = "("
+        case ParensClose = ")"
+    }
+    
     final class PythonRules: Grammar {
+        typealias Terminal = PythonRulesTerminals
         typealias Output = String
         static var startSymbol = "E"
         static var nonTerminals = ["E", "T", "F"]
-        static var terminals = ["id", "+", "*", "(", ")"]
         
-        static var rules: [CodingChallenges.Rule2<PythonExampleTests.PythonRules>] {
-            [Rule2("E -> E + T"),
-             Rule2("E -> T"),
-             Rule2("T -> T * F"),
-             Rule2("T -> F"),
-             Rule2("F -> ( E )"),
-             Rule2("F -> id"),
+        static var rules: [CodingChallenges.Rule<PythonExampleTests.PythonRules>] {
+            [Rule("E -> E + T"),
+             Rule("E -> T"),
+             Rule("T -> T * F"),
+             Rule("T -> F"),
+             Rule("F -> ( E )"),
+             Rule("F -> id"),
             ]
         }
     }

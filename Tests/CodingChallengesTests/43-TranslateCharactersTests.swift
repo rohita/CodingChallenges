@@ -5,8 +5,8 @@ final class TranslateCharactersTests: XCTestCase {
     let lexer = TRLexer()
     
     func testTRLexer() throws {
-        let result = lexer.tokenize("A-Z")
-        let expected: [Token<TRLexer.Types>] = [
+        let result = try lexer.tokenize("A-Z")
+        let expected: [Token<TRLexer>] = [
             Token(.Character, value: "A"),
             Token(.Literal, value: "-"),
             Token(.Character, value: "Z")
@@ -15,8 +15,8 @@ final class TranslateCharactersTests: XCTestCase {
     }
     
     func testClassnameLexer() throws {
-        let result = lexer.tokenize("[:digit:]")
-        let expected: [Token<TRLexer.Types>] = [
+        let result = try lexer.tokenize("[:digit:]")
+        let expected: [Token<TRLexer>] = [
             Token(.Literal, value: "["),
             Token(.Literal, value: ":"),
             Token(.Digit),

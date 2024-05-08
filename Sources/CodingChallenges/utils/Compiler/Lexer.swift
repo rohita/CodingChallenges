@@ -10,27 +10,6 @@
 
 import Foundation
 
-/** Representation of a single token */
-public protocol TokenType: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
-public struct Token<T: TokenType>: Equatable, CustomDebugStringConvertible {
-    public var type: T
-    public var value: String
-    
-    public init(_ type: T, value: String) {
-        self.type = type
-        self.value = value
-    }
-    
-    public init(_ type: T) {
-        self.type = type
-        self.value = type.rawValue
-    }
-    
-    public var debugDescription: String {
-        "\(type)=\(value)"
-    }
-}
-
 /**
  In the lexical analysis phase, we simply try to break up the input
  (source code) into the small units called lexemes. These units carry
@@ -40,7 +19,11 @@ public struct Token<T: TokenType>: Equatable, CustomDebugStringConvertible {
  specified by a collection of regular expression rules.
  */
 public protocol Lexer {
-    associatedtype Types: TokenType
+    /**
+    TokenType maps to Grammer terminals
+     */
+    associatedtype TokenType: SymbolIdentifer
+    
     /**
      For each token, we need a regular expression capable of matching its
      corresponding lexeme. Then, we need to generate the token that matches
@@ -50,14 +33,37 @@ public protocol Lexer {
      to match at the beginning of the context and the second parameter is a
      closure that will generate the relevant token.
     */
-    var tokenRules: [(String, (String) -> Token<Types>?)] { get }
+    var tokenRules: [(String, (String) -> Token<Self>?)] { get }
+}
+
+/**
+ Representation of a single token, which the lexer recognizes
+ */
+public struct Token<L: Lexer>: Hashable, CustomDebugStringConvertible {
+    public var type: L.TokenType
+    public var value: String
+    public var name: String {
+        type.rawValue
+    }
     
-    /**
-     A literal character is a single character that is returned “as is”
-     when encountered by the lexer. Literals are checked after all of
-     the defined regular expression rules.
-    */
-    func literal(_ : String) -> Token<Types>
+    public init(_ type: L.TokenType, value: String) {
+        self.type = type
+        self.value = value
+    }
+    
+    public init(_ type: L.TokenType) {
+        self.type = type
+        self.value = type.rawValue
+    }
+    
+    public init(_ name: String) {
+        self.type = L.TokenType(rawValue: name)!
+        self.value = name
+    }
+    
+    public var debugDescription: String {
+        "\(type)=\(value)"
+    }
 }
 
 extension Lexer {
@@ -67,8 +73,8 @@ extension Lexer {
      to interpret the code in any way. We just want to identify different
      parts of the source and label them.
      */
-    public func tokenize(_ input: String) -> [Token<Types>] {
-        var tokens = [Token<Types>]()
+    public func tokenize(_ input: String) throws -> [Token<Self>] {
+        var tokens = [Token<Self>]()
         var content = input
         
         while (content.count > 0) {
@@ -89,10 +95,13 @@ extension Lexer {
             
             if !matched {
                 let index = content.index(content.startIndex, offsetBy: 1)
-                tokens.append(literal(String(content.prefix(upTo: index))))
-                content = String(content.suffix(from: index))
+                throw LexerError.unrecognizedToken(String(content.prefix(upTo: index)))
             }
         }
         return tokens
     }
+}
+
+enum LexerError: Error {
+    case unrecognizedToken(String)
 }
