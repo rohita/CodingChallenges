@@ -49,13 +49,13 @@ final class PythonExampleTests: XCTestCase {
         }
     }
     
-    func printResult(rules: [SLR1<PythonRules>.Item]) {
+    func printResult(rules: [Item<PythonRules>]) {
         for rule in rules {
             print("\(rule)")
         }
     }
     
-    func printStateTransitions(stateMap: [Int: SLR1<PythonRules>.ItemSet]) {
+    func printStateTransitions(stateMap: [Int: ItemSet<PythonRules>]) {
         let numRows = stateMap.keys.count
         let columnWidth = 5
         var rows = [String](repeating: "", count: numRows)
@@ -86,7 +86,10 @@ final class PythonExampleTests: XCTestCase {
         print(sb)
     }
     
-    func printTable(table: [Int: [String: String]]) {
+    func printTable(parser: SLR1<PythonRules>) {
+        let actionTable = parser.actionTable
+        let gotoTable = parser.gotoTable
+        
         let cols = PythonRules.terminals + ["$"] + PythonRules.nonTerminals
         let columnWidth = 5
         var headerRow = "State|"
@@ -100,12 +103,26 @@ final class PythonExampleTests: XCTestCase {
         sb.append(String(repeating: "-", count: tableWidth))
         sb.append("\n")
         
-        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
+        for (key, value) in actionTable.sorted(by: { $0.key < $1.key }) {
             sb.append(String(format: "%4d |", key))
             
-            for symbol in cols {
+            for symbol in PythonRules.terminals + ["$"] {
                 if let action = value[symbol] {
-                    sb.append(String(format: " %-\(columnWidth)s", (action as NSString).utf8String!))
+                    let actionText = switch action {
+                    case .shift(let state): "S\(state)"
+                    case .reduce(let rule): "R\(parser.allRulesList.firstIndex(where: {$0.ruleEqual(to: rule)})!)"
+                    case .accept: "Accept"
+                    }
+                    
+                    sb.append(String(format: " %-\(columnWidth)s", (actionText as NSString).utf8String!))
+                } else {
+                    sb.append(String(format: " %-\(columnWidth)s", (" " as NSString).utf8String!))
+                }
+            }
+            
+            for symbol in PythonRules.nonTerminals {
+                if let action = gotoTable[key]?[symbol] {
+                    sb.append(String(format: " %-\(columnWidth)d", action))
                 } else {
                     sb.append(String(format: " %-\(columnWidth)s", (" " as NSString).utf8String!))
                 }
@@ -120,11 +137,10 @@ final class PythonExampleTests: XCTestCase {
     
     func testPrintGrammer() throws {
         printRules()
-        let augmentedRules = SLR1<PythonRules>.augmentedGrammar()
-        let p = SLR1<PythonRules>(allRulesList: augmentedRules)
+        let p = SLR1<PythonRules>()
         
         print("\nGrammar after Augmentation: \n")
-        printResult(rules: augmentedRules)
+        printResult(rules: p.allRulesList)
         
         print("\nCalculated closure: I0\n")
         let I0 = p.computeClosure(using: [p.allRulesList[0]])
@@ -144,8 +160,9 @@ final class PythonExampleTests: XCTestCase {
         p.createParseTable()
         
         print("\nSLR(1) parsing table:\n")
-        printTable(table: p.parsingTable)
-        XCTAssertEqual(p.parsingTable, expectedTable())
+        printTable(parser: p)
+        XCTAssertEqual(p.actionTable, expectedActionTable(r: p.allRulesList.map(\.rule)))
+        XCTAssertEqual(p.gotoTable, expectedGotoTable())
     }
     
     func expectedTable() -> [Int: [String: String]] {
@@ -170,13 +187,39 @@ final class PythonExampleTests: XCTestCase {
         return table
     }
     
-    
-    enum tokens: String  {
-        case Char, ALNUM, ALPHA, BLANK, CNTRL, DIGIT, LOWER, PRINT, PUNCT, RUNE, SPACE, SPECIAL, UPPER
+    func expectedActionTable(r: [Rule<PythonRules>]) -> [Int: [String: Action<PythonRules>]] {
+        var table : [Int: [String: Action<PythonRules>]] = [:]
+        for i in 0..<12 {
+            table[i] = [:]
+        }
+        
+        table[0] = ["(": .shift(4), "id": .shift(5)]
+        table[1] = ["$": .accept, "+": .shift(6)]
+        table[2] = ["*": .shift(7), "+": .reduce(r[2]), "$": .reduce(r[2]), ")": .reduce(r[2])]
+        table[3] = ["*": .reduce(r[4]), "+": .reduce(r[4]), ")": .reduce(r[4]), "$": .reduce(r[4])]
+        table[4] = ["id": .shift(5), "(": .shift(4)]
+        table[5] = ["$": .reduce(r[6]), "+": .reduce(r[6]), "*": .reduce(r[6]), ")": .reduce(r[6])]
+        table[6] = ["(": .shift(4), "id": .shift(5)]
+        table[7] = ["id": .shift(5), "(": .shift(4)]
+        table[8] = ["+": .shift(6), ")": .shift(11)]
+        table[9] = [")": .reduce(r[1]), "$": .reduce(r[1]), "*": .shift(7), "+": .reduce(r[1])]
+        table[10] = ["$": .reduce(r[3]), "*": .reduce(r[3]), "+": .reduce(r[3]), ")": .reduce(r[3])]
+        table[11] = ["$": .reduce(r[5]), "+": .reduce(r[5]), ")": .reduce(r[5]), "*": .reduce(r[5])]
+        
+        return table
     }
     
-    func testTokensEnum() {
-        print(tokens.ALNUM.rawValue)
-        print(tokens.Char.rawValue)
+    func expectedGotoTable() -> [Int: [String: Int]] {
+        var table: [Int: [String: Int]] = [:]
+        for i in 0..<12 {
+            table[i] = [:]
+        }
+        
+        table[0] = ["T": 2, "F": 3, "E": 1]
+        table[4] = ["E": 8, "T": 2, "F": 3]
+        table[6] = ["T": 9, "F": 3]
+        table[7] = ["F": 10]
+    
+        return table
     }
 }

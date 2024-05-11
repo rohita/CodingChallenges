@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- Represents the name of a grammer symbol. This can be a terminal or a non-terminal
+ Represents a grammer symbol. This can be a terminal or a non-terminal Grammer symbols. 
  */
 public protocol SymbolIdentifer: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
 
@@ -22,8 +22,8 @@ extension Grammar {
 }
 
 public struct Rule<G : Grammar>: Hashable {
-    public let lhs : Symbol<G>
-    public let rhs : [Symbol<G>]
+    public let lhs : String
+    public let rhs : [String]
     
     /*
      For terminals (lexer tokens), the value of the corresponding input symbol is the same
@@ -41,27 +41,15 @@ public struct Rule<G : Grammar>: Hashable {
 //    }
     
     public init(lhs: String, rhs: [String]) {
-        self.lhs = .nonTerm(lhs)
-        self.rhs = rhs.map{ str in
-            if G.terminals.contains(str) {
-                return .term(G.Terminal(rawValue: str)!)
-            } else {
-                return .nonTerm(str)
-            }
-        }
+        self.lhs = lhs
+        self.rhs = rhs
     }
     
     public init(_ rule: String) {
         let k = rule.split("->") // split LHS from RHS
-        self.lhs = .nonTerm(k[0].strip())
+        self.lhs = k[0].strip()
         let rhsSymbols = k[1].strip()
-        self.rhs = rhsSymbols.split().map{ str in
-            if G.terminals.contains(str) {
-                return .term(G.Terminal(rawValue: str)!)
-            } else {
-                return .nonTerm(str)
-            }
-        }
+        self.rhs = rhsSymbols.split()
     }
     
     // TODO: init with no production, but default production is AST

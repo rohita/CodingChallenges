@@ -9,20 +9,6 @@
 
 import Foundation
 
-// Grammer symbols that can hold terminals and non-terminals
-// It's interesting how Swift uses Enums for polymorphism.
-public enum Symbol<G: Grammar>: Hashable {
-    case term(G.Terminal)
-    case nonTerm(String)
-    
-    public var name: String {
-        switch self {
-        case .term(let t): t.rawValue
-        case .nonTerm(let nt): nt
-        }
-    }
-}
-
 public enum SymbolValue<G: Grammar> {
     case term(String)  // TODO: Replace with Token
     case nonTerm(G.Output)

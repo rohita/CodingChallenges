@@ -76,7 +76,7 @@ public struct Parser<G : Grammar, L: Lexer> {
     // - Value:  For terminals, the value assigned to tokens in the lexer module.
     //           For non-terminals, the value is whatever was returned by the production defined for its rule.
     // - State: Correspond to a finite-state machine that represents the parsing process.
-    public typealias StackItem = (symbol: Symbol<G>?, value: SymbolValue<G>, state: Int)
+    public typealias StackItem = (value: SymbolValue<G>, state: Int)
     
     // The action table is indexed by the current token and top-of-stack state, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
@@ -96,7 +96,7 @@ public struct Parser<G : Grammar, L: Lexer> {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()
-        let endSymbol = StackItem(symbol: nil, value: .eof, state: 0)
+        let endSymbol = StackItem(value: .eof, state: 0)
         stateStack.push(endSymbol)
         
     loop:
@@ -114,7 +114,7 @@ public struct Parser<G : Grammar, L: Lexer> {
                 
                 // accept input character and push new state onto stack
             case .shift(let state):
-                let nextStackItem = StackItem(symbol: .term(G.Terminal(rawValue: current!.name)!), value: .term(current!.value), state: state)
+                let nextStackItem = StackItem(value: .term(current!.value), state: state)
                 stateStack.push(nextStackItem)
                 current = iterator.next()
                 
@@ -130,11 +130,11 @@ public struct Parser<G : Grammar, L: Lexer> {
                 
                 let output = rule.production(input)
                 
-                guard let nextState = gotos[rule.lhs.name]?[stateAfter.state] else {
-                    throw ParserError<G>.noGoto(nonTerm: rule.lhs.name, state: stateAfter.state)
+                guard let nextState = gotos[rule.lhs]?[stateAfter.state] else {
+                    throw ParserError<G>.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
                 }
                 
-                let nextStackItem = StackItem(symbol: .nonTerm(rule.lhs.name), value: .nonTerm(output), state: nextState)
+                let nextStackItem = StackItem(value: .nonTerm(output), state: nextState)
                 stateStack.push(nextStackItem)
                 
             case .accept:

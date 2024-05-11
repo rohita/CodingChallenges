@@ -4,98 +4,103 @@
 import Foundation
 import Collections
 
-extension SLR1 {
-    struct Item: Hashable {
-        var rule: Rule<G>
-        private let dotIndex : Int // represents the next position to parse
-        
-        init(rule: Rule<G>, dotIndex: Int = 0) {
-            self.rule = rule
-            self.dotIndex = dotIndex
-        }
-        
-        var lhs: String {
-            rule.lhs.name
-        }
-        
-        var rhs: [String] {
-            rule.rhs.map(\.name)
-        }
-        
-        var isHandle: Bool {
-            dotIndex >= rhs.count
-        }
-        
-        // represents the next symbol to parse
-        var dotSymbol: String? {
-            isHandle ? nil : rhs[dotIndex]
-        }
-        
-        func advanceDot(after sym: String) -> Item? {
-            dotSymbol.flatMap{ $0 == sym ?
-                Item(rule: rule, dotIndex: dotIndex + 1) :
-                nil
-            }
-        }
-        
-        func ruleEqual(to other: Item) -> Bool {
-            self.rule == other.rule
+
+struct Item<G: Grammar>: Hashable {
+    var rule: Rule<G>
+    private let dotIndex : Int // represents the next position to parse
+    
+    init(rule: Rule<G>, dotIndex: Int = 0) {
+        self.rule = rule
+        self.dotIndex = dotIndex
+    }
+    
+    var lhs: String {
+        rule.lhs
+    }
+    
+    var rhs: [String] {
+        rule.rhs
+    }
+    
+    var isHandle: Bool {
+        dotIndex >= rhs.count
+    }
+    
+    // represents the next symbol to parse
+    var dotSymbol: String? {
+        isHandle ? nil : rhs[dotIndex]
+    }
+    
+    func advanceDot(after sym: String) -> Item? {
+        dotSymbol.flatMap{ $0 == sym ?
+            Item(rule: rule, dotIndex: dotIndex + 1) :
+            nil
         }
     }
     
-    struct ItemSet: Equatable {
-        let items: [Item]
-        var transitions: [String: Int]
-        
-        init(items: [Item], transitions: [String : Int] = [:]) {
-            self.items = items
-            self.transitions = transitions
-        }
-        
-        var dotSymbols: OrderedSet<String> {
-            OrderedSet(items.compactMap{$0.dotSymbol})
-        }
-        
-        var reduceRules: [Item] {
-            items.filter(\.isHandle)
-        }
-        
-        func getItemsByAdvancingDot(after symbol: String) -> [Item] {
-            items.compactMap{$0.advanceDot(after: symbol)}
-        }
-        
-        static func == (lhs: ItemSet, rhs: ItemSet) -> Bool {
-            lhs.items == rhs.items
-        }
+    func ruleEqual(to other: Item) -> Bool {
+        self.rule == other.rule
     }
     
-    static func augmentedGrammar() -> [Item] {
-        var runningRulesList: [Item] = []
-        let newStartSymbol = G.startSymbol + "'"  // create unique 'symbol' to represent new start symbol
-        runningRulesList.append(Item(rule: Rule(lhs: newStartSymbol, rhs: [G.startSymbol]))) // adding rule to bring start symbol to RHS
-        runningRulesList.append(contentsOf: G.rules.map{Item(rule: $0)})
+    func ruleEqual(to other: Rule<G>) -> Bool {
+        self.rule == other
+    }
+}
+
+struct ItemSet<G: Grammar>: Equatable {
+    let items: [Item<G>]
+    var transitions: [String: Int]
+    
+    init(items: [Item<G>], transitions: [String : Int] = [:]) {
+        self.items = items
+        self.transitions = transitions
+    }
+    
+    var dotSymbols: OrderedSet<String> {
+        OrderedSet(items.compactMap{$0.dotSymbol})
+    }
+    
+    var reduceRules: [Item<G>] {
+        items.filter(\.isHandle)
+    }
+    
+    func getItemsByAdvancingDot(after symbol: String) -> [Item<G>] {
+        items.compactMap{$0.advanceDot(after: symbol)}
+    }
+    
+    static func == (lhs: ItemSet, rhs: ItemSet) -> Bool {
+        lhs.items == rhs.items
+    }
+}
+
+extension Grammar {
+    static func augmentedGrammar() -> [Item<Self>] {
+        var runningRulesList: [Item<Self>] = []
+        let newStartSymbol = startSymbol + "'"  // create unique 'symbol' to represent new start symbol
+        runningRulesList.append(Item(rule: Rule(lhs: newStartSymbol, rhs: [startSymbol]))) // adding rule to bring start symbol to RHS
+        runningRulesList.append(contentsOf: rules.map{Item(rule: $0)})
         return runningRulesList
     }
-    
-
 }
 
 class SLR1<G: Grammar> {
     let EPSILON = "#"
-    let allRulesList: [Item]
+    let allRulesList: [Item<G>]
     let startSymbol: String
     
-    var states: [Int: ItemSet]
-    var parsingTable: [Int: [String: String]]
+    var states: [Int: ItemSet<G>]
+    var actionTable: [Int: [String: Action<G>]]
+    var gotoTable: [Int: [String: Int]]
     
-    init(allRulesList: [Item]) {
-        self.allRulesList = allRulesList
+    init() {
+        self.allRulesList = G.augmentedGrammar()
         self.startSymbol = allRulesList[0].lhs
         self.states = [:]
-        self.parsingTable = [:]
+        self.actionTable = [:]
+        self.gotoTable = [:]
     }
     
-    func computeClosure(using kernelItems: [Item]) -> ItemSet {
+    func computeClosure(using kernelItems: [Item<G>]) -> ItemSet<G> {
         var runningClosureSet = OrderedSet(kernelItems)
         var prevLen = -1
         while prevLen != runningClosureSet.count {
@@ -108,7 +113,7 @@ class SLR1<G: Grammar> {
         return ItemSet(items: runningClosureSet.elements)
     }
     
-    func generateStates(startingState: ItemSet) {
+    func generateStates(startingState: ItemSet<G>) {
         states = [0: startingState]
         
         var prevLen = -1
@@ -143,14 +148,19 @@ class SLR1<G: Grammar> {
         
         // create empty table
         for i in rows {
-            parsingTable[i] = [:]
+            actionTable[i] = [:]
+            gotoTable[i] = [:]
         }
         
         // make shift and GOTO entries in table
         for a in 0..<rows.count {
             for symbol in cols {
                 if let transitionState = states[a]?.transitions[symbol] {
-                    parsingTable[a]![symbol] = "\(G.terminals.contains(symbol) ? "S" : "")\(transitionState)"
+                    if G.terminals.contains(symbol) {
+                        actionTable[a]![symbol] = .shift(transitionState)
+                    } else {
+                        gotoTable[a]![symbol] = transitionState
+                    }
                 }
             }
         }
@@ -162,7 +172,7 @@ class SLR1<G: Grammar> {
                 let ruleId = allRulesList.firstIndex(where: {$0.ruleEqual(to: reduceRule)})
                 let followResult = follow(nt: reduceRule.lhs)
                 for col in followResult {
-                    parsingTable[stateno]![col] = ruleId == 0 ? "Accept" : "R\(ruleId!)"
+                    actionTable[stateno]![col] = ruleId == 0 ? Action.accept : Action.reduce(reduceRule.rule)
                 }
             }
         }
@@ -221,8 +231,10 @@ class SLR1<G: Grammar> {
         }
         
         // recursion base condition for terminal or epsilon
-        if (G.terminals.contains(rhs[0]) || rhs[0] == EPSILON) {
+        if G.terminals.contains(rhs[0]) {
             return [rhs[0]]
+        } else if rhs[0] == EPSILON {
+            return [EPSILON]
         }
         
         // condition for Non-Terminals
@@ -250,7 +262,7 @@ class SLR1<G: Grammar> {
         
 }
 
-extension SLR1.Item: CustomDebugStringConvertible {
+extension Item: CustomDebugStringConvertible {
     var debugDescription: String {
         var sb = "\(lhs) -> "
         for i in 0..<rhs.count {
