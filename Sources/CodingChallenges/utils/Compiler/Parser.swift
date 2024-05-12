@@ -72,23 +72,22 @@ enum ParserError<G : Grammar>: Error {
  */
 public struct Parser<G : Grammar, L: Lexer> {
     // The parser's stack consists of:
-    // - Symbol: Terminal or nonterminal
-    // - Value:  For terminals, the value assigned to tokens in the lexer module.
+    // - Value:  For terminals, the value is whatever was assigned to Token.value attribute in the lexer module.
     //           For non-terminals, the value is whatever was returned by the production defined for its rule.
     // - State: Correspond to a finite-state machine that represents the parsing process.
     public typealias StackItem = (value: SymbolValue<G>, state: Int)
     
-    // The action table is indexed by the current token and top-of-stack state, and
+    // The action table is indexed by top-of-stack state and the current token, and
     // it tells which of the four actions to perform: **shift, reduce, accept, or reject**.
-    public let actions : [String? : [Int : Action<G>]]
+    var actionTable: [Int: [String: Action<G>]]
     
     // The goto table is used during a reduce action.
-    // gotos happen for each recognized rule
-    public let gotos : [String : [Int : Int]]
+    // Gotos happen for each recognized rule
+    var gotoTable: [Int: [String: Int]]
     
-    public init(actions: [String? : [Int : Action<G>]], gotos: [String : [Int : Int]]) {
-        self.actions = actions
-        self.gotos = gotos
+    public init(actions: [Int: [String: Action<G>]], gotos: [Int: [String: Int]]) {
+        self.actionTable = actions
+        self.gotoTable = gotos
     }
     
     // These input tokens are coming from the Lexer
@@ -106,7 +105,7 @@ public struct Parser<G : Grammar, L: Lexer> {
                 throw ParserError<G>.undefinedState
             }
             
-            guard let action = actions[current?.name]?[stateBefore.state] else {
+            guard let action = actionTable[stateBefore.state]?[current?.name ?? "$"] else {
                 throw ParserError<G>.noAction(token: current?.name, state: stateBefore.state)
             }
             
@@ -124,13 +123,13 @@ public struct Parser<G : Grammar, L: Lexer> {
                 for _ in rule.rhs {
                     input.insert(stateStack.pop()!.value, at: 0)
                 }
+                let output = rule.production(input)
+                
                 guard let stateAfter = stateStack.peek() else {
                     throw ParserError<G>.undefinedState
                 }
                 
-                let output = rule.production(input)
-                
-                guard let nextState = gotos[rule.lhs]?[stateAfter.state] else {
+                guard let nextState = gotoTable[stateAfter.state]?[rule.lhs] else {
                     throw ParserError<G>.noGoto(nonTerm: rule.lhs, state: stateAfter.state)
                 }
                 

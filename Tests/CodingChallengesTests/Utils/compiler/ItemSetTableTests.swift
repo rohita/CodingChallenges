@@ -1,36 +1,10 @@
 import XCTest
 @testable import CodingChallenges
 
-final class PythonExampleTests: XCTestCase {
-//    let rules = ["E -> E + T | T",
-//                 "T -> T * F | F",
-//                 "F -> ( E ) | id"
-//    ]
-//    let nonterm_userdef = ["E", "T", "F"]
-//    let term_userdef = ["id", "+", "*", "(", ")"]
-    
-//    let rules = ["S -> S T | T",
-//                 "T -> C - C | C",
-//                 "C -> a | b | c"
-//    ]
-//    let nonterm_userdef = ["S", "T", "C"]
-//    let term_userdef = ["-", "a", "b", "c"]
-    
-    enum PythonRulesTerminals : String, SymbolIdentifer {
-        case id = "id"
-        case plus = "+"
-        case times = "*"
-        case ParensOpen = "("
-        case ParensClose = ")"
-    }
-    
+final class ItemSetTableTests: XCTestCase {
     final class PythonRules: Grammar {
-        typealias Terminal = PythonRulesTerminals
         typealias Output = String
-        static var startSymbol = "E"
-        static var nonTerminals = ["E", "T", "F"]
-        
-        static var rules: [CodingChallenges.Rule<PythonExampleTests.PythonRules>] {
+        static var rules: [Rule<PythonRules>] {
             [Rule("E -> E + T"),
              Rule("E -> T"),
              Rule("T -> T * F"),
@@ -40,7 +14,6 @@ final class PythonExampleTests: XCTestCase {
             ]
         }
     }
-    
 
     func printRules() {
         print("\nOriginal grammar input:\n")
@@ -86,7 +59,7 @@ final class PythonExampleTests: XCTestCase {
         print(sb)
     }
     
-    func printTable(parser: SLR1<PythonRules>) {
+    func printTable(parser: ItemSetTable<PythonRules>) {
         let actionTable = parser.actionTable
         let gotoTable = parser.gotoTable
         
@@ -137,7 +110,7 @@ final class PythonExampleTests: XCTestCase {
     
     func testPrintGrammer() throws {
         printRules()
-        let p = SLR1<PythonRules>()
+        let p = ItemSetTable<PythonRules>()
         
         print("\nGrammar after Augmentation: \n")
         printResult(rules: p.allRulesList)

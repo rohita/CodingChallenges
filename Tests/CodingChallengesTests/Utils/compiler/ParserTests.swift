@@ -2,28 +2,25 @@ import XCTest
 @testable import CodingChallenges
 
 final class ParserTests: XCTestCase {
+    let lexer1 = TestGrammerLexer()
+    let parser1 = Parser<TestGrammerRules, TestGrammerLexer>.SLR1()
+    
     func testGrammerLexerRange() throws {
-        let charStream = "A-Z"
-        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Dash, value: "-"), Token(.Character, value: "Z")]
-        let lexer = TestGrammerLexer()
-        let result = try lexer.tokenize(charStream)
-        XCTAssertEqual(expected, result)
+        let expected: [Character] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                                     "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                                     "W", "X", "Y", "Z"]
+        let parsed = try parser1.parse(tokens: lexer1.tokenize("A-Z"))
+        XCTAssertEqual(expected, parsed!)
     }
     
     func testGrammerLexerChar() throws {
-        let charStream = "AZ"
-        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Character, value: "Z")]
-        let lexer = TestGrammerLexer()
-        let result = try lexer.tokenize(charStream)
-        XCTAssertEqual(expected, result)
+        let parsed = try parser1.parse(tokens: lexer1.tokenize("AZ"))
+        XCTAssertEqual(["A", "Z"], parsed!)
     }
     
     func testSingleChar() throws {
-        let lexer = TestGrammerLexer()
-        let tokens = try lexer.tokenize("a")
-//        let parser = try Parser.LR0(rules: TestGrammerRule.self)
-//        print(parser)
-//        print(try parser.parse(tokens: tokens) ?? "Error")
+        let parsed = try parser1.parse(tokens: lexer1.tokenize("a"))
+        XCTAssertEqual(["a"], parsed!)
     }
 }
 

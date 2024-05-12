@@ -83,7 +83,7 @@ extension Grammar {
     }
 }
 
-class SLR1<G: Grammar> {
+class ItemSetTable<G: Grammar> {
     let EPSILON = "#"
     let allRulesList: [Item<G>]
     let startSymbol: String
@@ -260,6 +260,16 @@ class SLR1<G: Grammar> {
         return fres
     }
         
+}
+
+public extension Parser {
+    static func SLR1() -> Self {
+        let table = ItemSetTable<G>()
+        let I0 = table.computeClosure(using: [table.allRulesList[0]])
+        table.generateStates(startingState: I0)
+        table.createParseTable()
+        return Parser(actions: table.actionTable, gotos: table.gotoTable)
+    }
 }
 
 extension Item: CustomDebugStringConvertible {

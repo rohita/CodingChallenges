@@ -20,7 +20,8 @@ import Foundation
  */
 public protocol Lexer {
     /**
-    TokenType maps to Grammer terminals
+    TokenType maps to Grammer terminals.
+    These are the symbols we can use in the grammer rules
      */
     associatedtype TokenType: SymbolIdentifer
     

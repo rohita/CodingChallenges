@@ -1,4 +1,4 @@
-/*
+/**
  In grammar, there are two types of identifiers:
   a.) Terminals: Raw input tokens such as NUMBER, CHAR, +, -, etc.
   b.) Non-terminals: Rules comprised of a collection of terminals and other rules.
@@ -9,11 +9,25 @@
 
 import Foundation
 
+/**
+ Represents a grammer symbol. This can be a terminal or a non-terminal Grammer symbols.
+ */
+public protocol SymbolIdentifer:
+    RawRepresentable,
+    CaseIterable,
+    Hashable
+    where RawValue == String {}
+
+
 public enum SymbolValue<G: Grammar> {
-    case term(String)  // TODO: Replace with Token
+    case term(String)
     case nonTerm(G.Output)
     case eof
     
+    /**
+     For terminals, the string is whatever was assigned to Token.value attribute in the lexer module.
+     The rule production should know how to convert string to G.Output
+     */
     public var termValue: String? {
         switch self {
         case .term(let c): c
@@ -28,6 +42,3 @@ public enum SymbolValue<G: Grammar> {
         }
     }
 }
-
-
-

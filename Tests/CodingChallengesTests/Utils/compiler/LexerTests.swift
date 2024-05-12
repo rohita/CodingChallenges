@@ -8,6 +8,25 @@ final class LexerTests: XCTestCase {
         let result = try lexer.tokenize(charStream)
         print(result)
     }
+    
+    let lexer1 = TestGrammerLexer()
+    
+    func testLexerRange() throws {
+        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Dash, value: "-"), Token(.Character, value: "Z")]
+        let tokens = try lexer1.tokenize("A-Z")
+        XCTAssertEqual(expected, tokens)
+    }
+    
+    func testLexerChar() throws {
+        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Character, value: "Z")]
+        let tokens = try lexer1.tokenize("AZ")
+        XCTAssertEqual(expected, tokens)
+    }
+    
+    func testSingleChar() throws {
+        let tokens = try lexer1.tokenize("a")
+        XCTAssertEqual([Token(.Character, value: "a")], tokens)
+    }
 }
 
 final class CalcLexer: Lexer {
