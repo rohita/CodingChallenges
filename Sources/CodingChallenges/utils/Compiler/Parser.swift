@@ -70,7 +70,7 @@ enum ParserError<G : Grammar>: Error {
      end do
  ```
  */
-public struct Parser<G : Grammar, L: Lexer> {
+public struct Parser<G : Grammar> {
     // The parser's stack consists of:
     // - Value:  For terminals, the value is whatever was assigned to Token.value attribute in the lexer module.
     //           For non-terminals, the value is whatever was returned by the production defined for its rule.
@@ -88,10 +88,11 @@ public struct Parser<G : Grammar, L: Lexer> {
     public init(actions: [Int: [String: Action<G>]], gotos: [Int: [String: Int]]) {
         self.actionTable = actions
         self.gotoTable = gotos
+        // TODO: Check if all L.TokenTypes are defined in G.terminals and visa versa
     }
     
     // These input tokens are coming from the Lexer
-    func parse(tokens: [Token<L>]) throws -> G.Output? {
+    func parse(tokens: [Token<G.TokenTypes>]) throws -> G.Output? {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()
@@ -105,6 +106,9 @@ public struct Parser<G : Grammar, L: Lexer> {
                 throw ParserError<G>.undefinedState
             }
             
+            // This right here is when Lexer tokens map to Parser terminals.
+            // current.name is terminal symbol and current.value is the symbol value
+            // The current.name has to be part of Gammar rules. 
             guard let action = actionTable[stateBefore.state]?[current?.name ?? "$"] else {
                 throw ParserError<G>.noAction(token: current?.name, state: stateBefore.state)
             }

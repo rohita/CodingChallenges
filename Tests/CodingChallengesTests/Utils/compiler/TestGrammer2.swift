@@ -20,16 +20,12 @@ final class TG2ParserTests: XCTestCase {
 //    }
 }
 
-enum TG2NonTerm : String {
-    case E
-    case B
-}
 
 final class TG2Lexer: Lexer {
-    var tokenRules: [(String, (String) -> CodingChallenges.Token<TG2Lexer>?)] = []
+    var tokenRules: [(String, (String) -> CodingChallenges.Token<TokenTypes>?)] = []
     
     
-    enum TokenType : String, SymbolIdentifer {
+    enum TokenTypes : String, Tokenizable {
         case zero = "0"
         case one = "1"
         case plus = "+"

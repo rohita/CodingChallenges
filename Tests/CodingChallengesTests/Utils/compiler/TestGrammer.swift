@@ -18,13 +18,13 @@ import CodingChallenges
 
 public final class TestGrammerLexer: Lexer {
     /* These are the symbols we can use in the grammer below as terminals */
-    public enum TokenType: String, SymbolIdentifer {
+    public enum TokenTypes: String, Tokenizable {
         case Character = "CHAR"
         case Digit = "digit"
         case Dash = "-"
     }
     
-    public var tokenRules: [(String, (String) -> Token<TestGrammerLexer>?)] {
+    public var tokenRules: [(String, (String) -> Token<TokenTypes>?)] {
         [
             ("digit", {_ in Token(.Digit) }),
             ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
@@ -35,6 +35,7 @@ public final class TestGrammerLexer: Lexer {
 
 final class TestGrammerRules: Grammar {
     typealias Output = [Character]
+    typealias TokenTypes = TestGrammerLexer.TokenTypes
     static var rules: [Rule<TestGrammerRules>] {
         [
             Rule("S -> S TOKEN") { p in

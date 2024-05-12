@@ -3,7 +3,7 @@ import XCTest
 
 final class ParserTests: XCTestCase {
     let lexer1 = TestGrammerLexer()
-    let parser1 = Parser<TestGrammerRules, TestGrammerLexer>.SLR1()
+    let parser1 = Parser<TestGrammerRules>.SLR1()
     
     func testGrammerLexerRange() throws {
         let expected: [Character] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",

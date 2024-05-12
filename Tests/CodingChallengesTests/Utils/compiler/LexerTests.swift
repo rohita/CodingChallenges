@@ -12,13 +12,13 @@ final class LexerTests: XCTestCase {
     let lexer1 = TestGrammerLexer()
     
     func testLexerRange() throws {
-        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Dash, value: "-"), Token(.Character, value: "Z")]
+        let expected: [Token<TestGrammerLexer.TokenTypes>] = [Token(.Character, value: "A"), Token(.Dash, value: "-"), Token(.Character, value: "Z")]
         let tokens = try lexer1.tokenize("A-Z")
         XCTAssertEqual(expected, tokens)
     }
     
     func testLexerChar() throws {
-        let expected: [Token<TestGrammerLexer>] = [Token(.Character, value: "A"), Token(.Character, value: "Z")]
+        let expected: [Token<TestGrammerLexer.TokenTypes>] = [Token(.Character, value: "A"), Token(.Character, value: "Z")]
         let tokens = try lexer1.tokenize("AZ")
         XCTAssertEqual(expected, tokens)
     }
@@ -30,7 +30,7 @@ final class LexerTests: XCTestCase {
 }
 
 final class CalcLexer: Lexer {
-    public enum TokenType: String, SymbolIdentifer {
+    public enum TokenTypes: String, Tokenizable {
         case Define = "def"
         case Identifier
         case Number
@@ -39,7 +39,7 @@ final class CalcLexer: Lexer {
         case Comma = ","
     }
     
-    var tokenRules: [(String, (String) -> Token<CalcLexer>?)] {
+    var tokenRules: [(String, (String) -> Token<TokenTypes>?)] {
         [
             ("[ \t\n]", { _ in nil }),
             ("[a-zA-Z][a-zA-Z0-9]*", { $0 == "def" ? Token(.Define) : Token(.Identifier, value: $0) }),

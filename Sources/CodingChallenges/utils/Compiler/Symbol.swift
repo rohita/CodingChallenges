@@ -9,16 +9,6 @@
 
 import Foundation
 
-/**
- Represents a grammer symbol. This can be a terminal or a non-terminal Grammer symbols.
- */
-public protocol SymbolIdentifer:
-    RawRepresentable,
-    CaseIterable,
-    Hashable
-    where RawValue == String {}
-
-
 public enum SymbolValue<G: Grammar> {
     case term(String)
     case nonTerm(G.Output)

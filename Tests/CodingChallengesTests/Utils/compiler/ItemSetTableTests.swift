@@ -4,6 +4,11 @@ import XCTest
 final class ItemSetTableTests: XCTestCase {
     final class PythonRules: Grammar {
         typealias Output = String
+        
+        enum TokenTypes: String, Tokenizable {
+            case plus = "+"
+        }
+        
         static var rules: [Rule<PythonRules>] {
             [Rule("E -> E + T"),
              Rule("E -> T"),

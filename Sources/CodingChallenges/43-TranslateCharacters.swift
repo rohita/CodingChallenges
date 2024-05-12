@@ -5,15 +5,13 @@
 import Foundation
 
 final class TRLexer: Lexer {
-    typealias TokenType = TokenTypes
-    
-    enum TokenTypes: String, SymbolIdentifer {
+    enum TokenTypes: String, Tokenizable {
         case Digit
         case Character
         case Literal
     }
 
-    var tokenRules: [(String, (String) -> Token<TRLexer>?)] {
+    var tokenRules: [(String, (String) -> Token<TokenTypes>?)] {
         [
             ("digit", {_ in Token(.Digit) }),
             ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
@@ -64,7 +62,7 @@ class TRParser: CCParser<TRLexer> {
         }
         
         // case TRLexer.Types.Literal("-") =
-        guard popCurrentToken() == Token(.Literal, value: "-") else {
+        guard popCurrentToken() == Token<TRLexer.TokenTypes>(.Literal, value: "-") else {
             throw ParseError.UnexpectedToken
         }
 

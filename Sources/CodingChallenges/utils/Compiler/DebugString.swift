@@ -1,5 +1,10 @@
 import Foundation
 
+extension Token: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "\(name)=\(value)"
+    }
+}
 
 extension Action: CustomDebugStringConvertible {
     public var debugDescription: String {

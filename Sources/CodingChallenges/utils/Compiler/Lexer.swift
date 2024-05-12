@@ -20,10 +20,9 @@ import Foundation
  */
 public protocol Lexer {
     /**
-    TokenType maps to Grammer terminals.
-    These are the symbols we can use in the grammer rules
+     TokenType maps to Grammer terminals.
      */
-    associatedtype TokenType: SymbolIdentifer
+    associatedtype TokenTypes: Tokenizable
     
     /**
      For each token, we need a regular expression capable of matching its
@@ -34,37 +33,7 @@ public protocol Lexer {
      to match at the beginning of the context and the second parameter is a
      closure that will generate the relevant token.
     */
-    var tokenRules: [(String, (String) -> Token<Self>?)] { get }
-}
-
-/**
- Representation of a single token, which the lexer recognizes
- */
-public struct Token<L: Lexer>: Hashable, CustomDebugStringConvertible {
-    public var type: L.TokenType
-    public var value: String
-    public var name: String {
-        type.rawValue
-    }
-    
-    public init(_ type: L.TokenType, value: String) {
-        self.type = type
-        self.value = value
-    }
-    
-    public init(_ type: L.TokenType) {
-        self.type = type
-        self.value = type.rawValue
-    }
-    
-    public init(_ name: String) {
-        self.type = L.TokenType(rawValue: name)!
-        self.value = name
-    }
-    
-    public var debugDescription: String {
-        "\(type)=\(value)"
-    }
+    var tokenRules: [(String, (String) -> Token<TokenTypes>?)] { get }
 }
 
 extension Lexer {
@@ -74,8 +43,8 @@ extension Lexer {
      to interpret the code in any way. We just want to identify different
      parts of the source and label them.
      */
-    public func tokenize(_ input: String) throws -> [Token<Self>] {
-        var tokens = [Token<Self>]()
+    public func tokenize(_ input: String) throws -> [Token<TokenTypes>] {
+        var tokens = [Token<TokenTypes>]()
         var content = input
         
         while (content.count > 0) {
