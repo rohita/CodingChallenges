@@ -9,7 +9,7 @@
  */
 
 import XCTest
-@testable import CodingChallenges
+import CodingChallenges
 
 final class TG2ParserTests: XCTestCase {
 //    func testTG2() throws {
@@ -22,15 +22,8 @@ final class TG2ParserTests: XCTestCase {
 
 
 final class TG2Lexer: Lexer {
-    var tokenRules: [(String, (String) -> CodingChallenges.Token<TokenTypes>?)] = []
-    
-    
-    enum TokenTypes : String, Tokenizable {
-        case zero = "0"
-        case one = "1"
-        case plus = "+"
-        case times = "*"
-    }
+    static var literals = ["0", "1", "*", "+"]
+    static var ignore = "[ \t\n]"
 }
 
 /*

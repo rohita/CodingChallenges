@@ -6,17 +6,15 @@ import Foundation
 
 final class TRLexer: Lexer {
     enum TokenTypes: String, Tokenizable {
-        case Digit
-        case Character
-        case Literal
+        case DIGIT, CHAR
     }
 
-    var tokenRules: [(String, (String) -> Token<TokenTypes>?)] {
-        [
-            ("digit", {_ in Token(.Digit) }),
-            ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
-        ]
-    }
+    static var literals: [String] = ["-", ":", "[", "]"]
+    
+    static var tokenRules: [TokenRule<TokenTypes>] = [
+        TokenRule(.DIGIT, pattern: "digit"),
+        TokenRule(.CHAR,  pattern: "[A-Za-z0-9]")
+    ]
 }
 
 /***
@@ -62,7 +60,7 @@ class TRParser: CCParser<TRLexer> {
         }
         
         // case TRLexer.Types.Literal("-") =
-        guard popCurrentToken() == Token<TRLexer.TokenTypes>(.Literal, value: "-") else {
+        guard popCurrentToken() == Token("-") else {
             throw ParseError.UnexpectedToken
         }
 
@@ -74,7 +72,7 @@ class TRParser: CCParser<TRLexer> {
     func parseCharacter() throws -> CharacterNode {
         // case let TRLexer.Token.Character(name) =
         let char = popCurrentToken()
-        guard char.type == .Character else {
+        guard char.name == "CHAR" else {
             throw ParseError.ExpectedCharacter
         }
         return CharacterNode(name: Character(char.value))

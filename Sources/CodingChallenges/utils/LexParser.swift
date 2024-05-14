@@ -12,10 +12,10 @@ import Foundation
 
 
 class CCParser<L: Lexer> {
-    let tokens: [Token<L.TokenTypes>]
+    let tokens: [Token]
     var index = 0
 
-    init(tokens: [Token<L.TokenTypes>]) {
+    init(tokens: [Token]) {
         self.tokens = tokens
     }
 
@@ -23,11 +23,11 @@ class CCParser<L: Lexer> {
         return index < tokens.count
     }
 
-    func peekCurrentToken() -> Token<L.TokenTypes> {
+    func peekCurrentToken() -> Token {
         return tokens[index]
     }
 
-    func popCurrentToken() -> Token<L.TokenTypes> {
+    func popCurrentToken() -> Token {
         let returnVal = tokens[index]
         index += 1
         return returnVal

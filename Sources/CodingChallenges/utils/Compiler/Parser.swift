@@ -92,7 +92,7 @@ public struct Parser<G : Grammar> {
     }
     
     // These input tokens are coming from the Lexer
-    func parse(tokens: [Token<G.TokenTypes>]) throws -> G.Output? {
+    func parse(tokens: [Token]) throws -> G.Output? {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()

@@ -1,4 +1,5 @@
 import CodingChallenges
+import Collections
 
 /**
  Test Grammer
@@ -16,21 +17,17 @@ import CodingChallenges
  ```
  */
 
-public final class TestGrammerLexer: Lexer {
-    /* These are the symbols we can use in the grammer below as terminals */
-    public enum TokenTypes: String, Tokenizable {
-        case Character = "CHAR"
-        case Digit = "digit"
-        case Dash = "-"
+final class TestGrammerLexer: Lexer {
+    enum TokenTypes: String, Tokenizable {
+        case DIGIT, CHAR
     }
     
-    public var tokenRules: [(String, (String) -> Token<TokenTypes>?)] {
-        [
-            ("digit", {_ in Token(.Digit) }),
-            ("[A-Za-z0-9]", { Token(.Character, value: $0) }),
-            ("\\-", { _ in Token(.Dash) })
-        ]
-    }
+    static var literals = ["-", ":", "[", "]"]
+    
+    static var tokenRules: [TokenRule<TokenTypes>] = [
+        TokenRule(.DIGIT, pattern: "digit"),
+        TokenRule(.CHAR,  pattern: "[A-Za-z0-9]")
+    ]
 }
 
 final class TestGrammerRules: Grammar {

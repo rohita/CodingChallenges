@@ -5,32 +5,41 @@ import Foundation
  */
 public protocol Tokenizable:
     RawRepresentable,
-    Hashable,
-    CaseIterable
+    Hashable
     where RawValue == String {}
 
 /**
  Representation of a single token, which the lexer recognizes, and parser parses.
  */
-public struct Token<T: Tokenizable>: Hashable {
-    public var type: T
-    public var value: String
-    public var name: String {
-        type.rawValue
-    }
+public struct Token: Hashable {
+    public let name: String
+    public let value: String
     
-    public init(_ type: T, value: String) {
-        self.type = type
+    
+    public init(_ name: String, value: String) {
+        self.name = name
         self.value = value
     }
     
-    public init(_ type: T) {
-        self.type = type
-        self.value = type.rawValue
-    }
-    
     public init(_ name: String) {
-        self.type = T(rawValue: name)!
+        self.name = name
         self.value = name
+    }
+}
+
+/**
+ The first parameter in the tuple represents the regular expression we want
+ to match at the beginning of the context and the second parameter is a
+ closure that will generate the relevant token.
+ */
+public struct TokenRule<T: Tokenizable> {
+    public let type: T
+    public let pattern: String
+    public let overrideAction: (Token) -> Token
+    
+    public init(_ type: T, pattern: String, overrideAction: @escaping (Token) -> Token = {$0}) {
+        self.type = type
+        self.pattern = pattern
+        self.overrideAction = overrideAction
     }
 }

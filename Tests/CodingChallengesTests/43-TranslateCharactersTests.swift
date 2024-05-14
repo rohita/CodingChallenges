@@ -6,22 +6,22 @@ final class TranslateCharactersTests: XCTestCase {
     
     func testTRLexer() throws {
         let result = try lexer.tokenize("A-Z")
-        let expected: [Token<TRLexer.TokenTypes>] = [
-            Token(.Character, value: "A"),
-            Token(.Literal, value: "-"),
-            Token(.Character, value: "Z")
+        let expected: [Token] = [
+            Token("CHAR", value: "A"),
+            Token("-"),
+            Token("CHAR", value: "Z")
         ]
         XCTAssertEqual(expected, result)
     }
     
     func testClassnameLexer() throws {
         let result = try lexer.tokenize("[:digit:]")
-        let expected: [Token<TRLexer.TokenTypes>] = [
-            Token(.Literal, value: "["),
-            Token(.Literal, value: ":"),
-            Token(.Digit),
-            Token(.Literal, value: ":"),
-            Token(.Literal, value: "]")
+        let expected: [Token] = [
+            Token("["),
+            Token(":"),
+            Token("DIGIT", value: "digit"),
+            Token(":"),
+            Token("]")
         ]
         XCTAssertEqual(expected, result)
     }
