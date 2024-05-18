@@ -19,27 +19,27 @@ final class LexerTests: XCTestCase {
     let lexer1 = TestGrammerLexer()
     
     func testLexerRange() throws {
-        let expected: [Token] = [Token("CHAR", value: "A"), Token("-"), Token("CHAR", value: "Z")]
+        let expected: [Token<TestGrammerLexer.TokenTypes>] = [Token(.CHAR, value: "A"), Token("-"), Token(.CHAR, value: "Z")]
         let tokens = try lexer1.tokenize("A-Z")
         XCTAssertEqual(expected, tokens)
     }
     
     func testLexerChar() throws {
-        let expected: [Token] = [Token("CHAR", value: "A"), Token("CHAR", value: "Z")]
+        let expected: [Token<TestGrammerLexer.TokenTypes>] = [Token(.CHAR, value: "A"), Token(.CHAR, value: "Z")]
         let tokens = try lexer1.tokenize("AZ")
         XCTAssertEqual(expected, tokens)
     }
     
     func testSingleChar() throws {
         let tokens = try lexer1.tokenize("a")
-        XCTAssertEqual([Token("CHAR", value: "a")], tokens)
+        XCTAssertEqual([Token(.CHAR, value: "a")], tokens)
     }
     
     func testLiterals() throws {
-        let expected: [Token] = [
+        let expected: [Token<TestGrammerLexer.TokenTypes>] = [
             Token("["),
             Token(":"),
-            Token("DIGIT", value: "digit"),
+            Token(.CLASSNAME, value: "digit"),
             Token(":"),
             Token("]")
         ]
@@ -59,7 +59,7 @@ final class CalcLexer: Lexer {
     
     static var tokenRules: [TokenRule<TokenTypes>] = [
         TokenRule(.Define,  pattern: "[a-zA-Z][a-zA-Z0-9]*") { token in
-            token.value == "def" ? token : Token(TokenTypes.Identifier.rawValue, value: token.value)
+            token.value == "def" ? token : Token(TokenTypes.Identifier, value: token.value)
         },
         TokenRule(.Number, pattern: "[0-9.]+")
     ]

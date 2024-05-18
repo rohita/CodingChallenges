@@ -12,12 +12,13 @@ import XCTest
 import CodingChallenges
 
 final class TG2ParserTests: XCTestCase {
-//    func testTG2() throws {
-//        let parser = try Parser.LR0(rules: TG2Rules.self)
-//        print(parser)
-//        let tokens: [Token<TG2Lexer>] = [Token(.zero), Token(.plus), Token(.one), Token(.plus), Token(.one)]
-//        print(try parser.parse(tokens: tokens) ?? "Error")
-//    }
+    func testTG2() throws {
+        let lexer = TG2Lexer()
+        let parser = Parser<TG2Rules>.SLR1()
+        print(parser)
+        let tokens = try lexer.tokenize("1 + 1 * 1 + 0")
+        print(try parser.parse(tokens: tokens) ?? "Error")
+    }
 }
 
 
@@ -26,38 +27,15 @@ final class TG2Lexer: Lexer {
     static var ignore = "[ \t\n]"
 }
 
-/*
-enum TG2Rules: Rules {
+final class TG2Rules: Grammar {
     typealias Output = Int
-    typealias L = TG2Lexer
+    typealias TokenTypes = TG2Lexer.TokenTypes
     
-    case eTimes
-    case ePlus
-    case eB
-    case bZero
-    case bOne
-    
-    static var goal = "E"
-    
-    var rule: Rule<Self> {
-        switch self {
-        case .eTimes:
-            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term(.times), .nonTerm("B")) { values in
-                values[0].nonTermValue! * values[2].nonTermValue!
-            }
-        case .ePlus:
-            Rule(.nonTerm("E"), expression: .nonTerm("E"), .term(.plus), .nonTerm("B")) { values in
-                values[0].nonTermValue! + values[2].nonTermValue!
-            }
-        case .eB:
-            Rule(.nonTerm("E"), expression: .nonTerm("B")) { values in
-                values[0].nonTermValue!
-            }
-        case .bZero:
-            Rule(.nonTerm("B"), expression: .term(.zero)) { _ in 0 }
-        case .bOne:
-            Rule(.nonTerm("B"), expression: .term(.one)) { _ in 1 }
-        }
-    }
+    static var rules: [Rule<TG2Rules>] = [
+        Rule("E -> E * B") { p in p[0].nonTermValue! * p[2].nonTermValue!},
+        Rule("E -> E + B") { p in p[0].nonTermValue! + p[2].nonTermValue!},
+        Rule("E -> B") { p in p[0].nonTermValue!},
+        Rule("B -> 0") { _ in 0 },
+        Rule("B -> 1") { _ in 1 }
+    ]
 }
-*/

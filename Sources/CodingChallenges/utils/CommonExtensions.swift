@@ -66,6 +66,10 @@ extension Character {
     var isWordSeparator: Bool {
         self.isWhitespace || self.isNewline
     }
+    
+    init(_ uint32: Int) {
+        self.init(UnicodeScalar(uint32)!)
+    }
 }
 
 public extension ClosedRange where Bound == Unicode.Scalar {

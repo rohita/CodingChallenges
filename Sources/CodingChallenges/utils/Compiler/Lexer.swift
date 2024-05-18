@@ -36,6 +36,9 @@ public protocol Lexer {
      Literals are checked after all of the defined regular expression rules. Thus, if a rule starts with
      one of the literal characters, it will always take precedence. When a literal token is returned,
      both its type and value attributes are set to the character itself. For example, '+'.
+     
+     Literals are limited to a single character. Thus, it is not legal to specify literal such as <= or \==.
+     For this, use the normal lexing rules (e.g., define a rule such as LE = "<=").
      */
     static var literals: [String] { get }
     
@@ -54,8 +57,8 @@ extension Lexer {
      to interpret the code in any way. We just want to identify different
      parts of the source and label them.
      */
-    public func tokenize(_ input: String) throws -> [Token] {
-        var tokens = [Token]()
+    public func tokenize(_ input: String) throws -> [Token<TokenTypes>] {
+        var tokens = [Token<TokenTypes>]()
         var content = input
         
         while (content.count > 0) {
@@ -71,7 +74,7 @@ extension Lexer {
             
             for tokenRule in Self.tokenRules {
                 if let match = content.firstMatch(of: try! Regex("^\(tokenRule.pattern)")) {
-                    let token = Token(tokenRule.type.rawValue, value: String(match.0))
+                    let token = Token<TokenTypes>(tokenRule.type, value: String(match.0))
                     let token2 = tokenRule.overrideAction(token)
                     tokens.append(token2)
                     
@@ -99,20 +102,15 @@ extension Lexer {
 
 // Default Implementations
 public extension Lexer {
-    static var tokenRules: [TokenRule<NilTokenType>] { [] }
+    static var tokenRules: [TokenRule<NoTokens>] { [] }
     static var literals: [String] { [] }
     static var ignore: String { "" }
 }
 
-public struct NilTokenType: Tokenizable {
-    public init?(rawValue: String) {
-        nil
-    }
-    
+public struct NoTokens: Tokenizable {
+    public init?(rawValue: String) { nil }
     public var rawValue: String
 }
-
-
 
 enum LexerError: Error {
     case unrecognizedToken(String)

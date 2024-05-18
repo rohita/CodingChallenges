@@ -11,19 +11,23 @@ public protocol Tokenizable:
 /**
  Representation of a single token, which the lexer recognizes, and parser parses.
  */
-public struct Token: Hashable {
+public struct Token<T: Tokenizable>: Hashable {
     public let name: String
     public let value: String
     
-    
-    public init(_ name: String, value: String) {
-        self.name = name
+    public init(_ type: T, value: String) {
+        self.name = type.rawValue
         self.value = value
     }
     
-    public init(_ name: String) {
-        self.name = name
-        self.value = name
+    public init(_ type: T) {
+        self.name = type.rawValue
+        self.value = type.rawValue
+    }
+    
+    public init(_ literal: String) {
+        self.name = literal
+        self.value = literal
     }
 }
 
@@ -35,9 +39,9 @@ public struct Token: Hashable {
 public struct TokenRule<T: Tokenizable> {
     public let type: T
     public let pattern: String
-    public let overrideAction: (Token) -> Token
+    public let overrideAction: (Token<T>) -> Token<T>
     
-    public init(_ type: T, pattern: String, overrideAction: @escaping (Token) -> Token = {$0}) {
+    public init(_ type: T, pattern: String, overrideAction: @escaping (Token<T>) -> Token<T> = {$0}) {
         self.type = type
         self.pattern = pattern
         self.overrideAction = overrideAction

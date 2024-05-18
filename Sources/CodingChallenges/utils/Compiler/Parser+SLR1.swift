@@ -48,10 +48,6 @@ struct Item<G: Grammar>: Hashable {
         }
     }
     
-    func ruleEqual(to other: Item) -> Bool {
-        self.rule == other.rule
-    }
-    
     func ruleEqual(to other: Rule<G>) -> Bool {
         self.rule == other
     }
@@ -70,7 +66,7 @@ struct ItemSet<G: Grammar>: Equatable {
         OrderedSet(items.compactMap{$0.dotSymbol})
     }
     
-    var reduceRules: [Item<G>] {
+    var reduceItems: [Item<G>] {
         items.filter(\.isHandle)
     }
     
@@ -84,27 +80,22 @@ struct ItemSet<G: Grammar>: Equatable {
 }
 
 extension Grammar {
-    static func augmentedGrammar() -> [Item<Self>] {
-        var runningRulesList: [Item<Self>] = []
-        let newStartSymbol = startSymbol + "'"  // create unique 'symbol' to represent new start symbol
-        runningRulesList.append(Item(rule: Rule(lhs: newStartSymbol, rhs: [startSymbol]))) // adding rule to bring start symbol to RHS
-        runningRulesList.append(contentsOf: rules.map{Item(rule: $0)})
-        return runningRulesList
+    static func augmentedGrammar() -> [Rule<Self>] {
+        let augmentedRule = Rule<Self>(lhs: startSymbol + "'", rhs: [startSymbol])
+        return [augmentedRule] + rules
     }
 }
 
+
 class ItemSetTable<G: Grammar> {
     let EPSILON = "#"
-    let allRulesList: [Item<G>]
-    let startSymbol: String
-    
+    let allRulesList: [Rule<G>]
     var states: [Int: ItemSet<G>]
     var actionTable: [Int: [String: Action<G>]]
     var gotoTable: [Int: [String: Int]]
     
     init() {
         self.allRulesList = G.augmentedGrammar()
-        self.startSymbol = allRulesList[0].lhs
         self.states = [:]
         self.actionTable = [:]
         self.gotoTable = [:]
@@ -117,7 +108,7 @@ class ItemSetTable<G: Grammar> {
             prevLen = runningClosureSet.count
             let dotSymbols = OrderedSet(runningClosureSet.compactMap{$0.dotSymbol})
             let newClosureRules = allRulesList.filter{dotSymbols.contains($0.lhs)}
-            runningClosureSet.append(contentsOf: newClosureRules)
+            runningClosureSet.append(contentsOf: newClosureRules.map{Item(rule: $0)})
         }
 
         return ItemSet(items: runningClosureSet.elements)
@@ -178,11 +169,11 @@ class ItemSetTable<G: Grammar> {
         // start REDUCE procedure
         // find 'handle' items and calculate follow.
         for (stateno, state) in states {
-            for reduceRule in state.reduceRules {
-                let ruleId = allRulesList.firstIndex(where: {$0.ruleEqual(to: reduceRule)})
-                let followResult = follow(nt: reduceRule.lhs)
+            for reduceItem in state.reduceItems {
+                let ruleId = allRulesList.firstIndex(where: {$0 == reduceItem.rule})
+                let followResult = follow(nt: reduceItem.lhs)
                 for col in followResult {
-                    actionTable[stateno]![col] = ruleId == 0 ? Action.accept : Action.reduce(reduceRule.rule)
+                    actionTable[stateno]![col] = ruleId == 0 ? Action.accept : Action.reduce(reduceItem.rule)
                 }
             }
         }
@@ -192,7 +183,7 @@ class ItemSetTable<G: Grammar> {
     // to the right of Non-Terminal
     private func follow(nt: String) -> [String] {
         var solset = OrderedSet<String>()
-        if nt == startSymbol {
+        if nt == allRulesList[0].lhs {
             solset.append("$")
         }
         
@@ -250,7 +241,7 @@ class ItemSetTable<G: Grammar> {
         // condition for Non-Terminals
         
         var fres: [String] = []
-        let rhs_rules = allRulesList.filter{$0.lhs == rhs[0]}.compactMap{$0.rhs} 
+        let rhs_rules = allRulesList.filter{$0.lhs == rhs[0]}.compactMap{$0.rhs}
         for itr in rhs_rules {
             fres.append(contentsOf: first(rhs: itr))
         }
@@ -269,13 +260,12 @@ class ItemSetTable<G: Grammar> {
         fres.append(EPSILON)
         return fres
     }
-        
 }
 
 public extension Parser {
     static func SLR1() -> Self {
         let table = ItemSetTable<G>()
-        let I0 = table.computeClosure(using: [table.allRulesList[0]])
+        let I0 = table.computeClosure(using: [Item(rule: table.allRulesList[0])])
         table.generateStates(startingState: I0)
         table.createParseTable()
         return Parser(actions: table.actionTable, gotos: table.gotoTable)

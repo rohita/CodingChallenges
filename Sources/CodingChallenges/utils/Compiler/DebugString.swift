@@ -48,7 +48,7 @@ extension Parser: CustomDebugStringConvertible {
                 if let action = value[symbol] {
                     let actionText = switch action {
                     case .shift(let state): "S\(state)"
-                    case .reduce(let rule): "R\(G.augmentedGrammar().firstIndex(where: {$0.ruleEqual(to: rule)})!)"
+                    case .reduce(let rule): "R\(G.augmentedGrammar().firstIndex(where: {$0 == rule})!)"
                     case .accept: "Accept"
                     }
                     

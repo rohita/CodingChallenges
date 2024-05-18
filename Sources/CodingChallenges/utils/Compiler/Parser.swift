@@ -88,11 +88,10 @@ public struct Parser<G : Grammar> {
     public init(actions: [Int: [String: Action<G>]], gotos: [Int: [String: Int]]) {
         self.actionTable = actions
         self.gotoTable = gotos
-        // TODO: Check if all L.TokenTypes are defined in G.terminals and visa versa
     }
     
     // These input tokens are coming from the Lexer
-    func parse(tokens: [Token]) throws -> G.Output? {
+    public func parse(tokens: [Token<G.TokenTypes>]) throws -> G.Output? {
         var iterator = tokens.makeIterator()
         var current = iterator.next()
         var stateStack = Stack<StackItem>()
