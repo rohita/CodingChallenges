@@ -3,6 +3,7 @@
 //
 
 import Foundation
+import SwiftSly
 
 final class TRLexer: Lexer {
     enum TokenTypes: String, Tokenizable {
@@ -11,9 +12,9 @@ final class TRLexer: Lexer {
 
     static var literals: [String] = ["-", ":", "[", "]"]
     
-    static var tokenRules: [TokenRule<TokenTypes>] = [
-        TokenRule(.DIGIT, pattern: "digit"),
-        TokenRule(.CHAR,  pattern: "[A-Za-z0-9]")
+    static var tokenRules: [TokenRegex<TokenTypes>] = [
+        TokenRegex(.DIGIT, pattern: "digit"),
+        TokenRegex(.CHAR,  pattern: "[A-Za-z0-9]")
     ]
 }
 

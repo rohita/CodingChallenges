@@ -1,4 +1,5 @@
 import XCTest
+import SwiftSly
 @testable import CodingChallenges
 
 final class TranslateCharactersTests: XCTestCase {

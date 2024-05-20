@@ -8,6 +8,15 @@
         "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
         "version" : "1.1.0"
       }
+    },
+    {
+      "identity" : "swift-sly",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/rohita/swift-sly.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "29296f51d8b2c740e386d3d734ceae552e9755f1"
+      }
     }
   ],
   "version" : 2
