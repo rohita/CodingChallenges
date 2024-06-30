@@ -5,148 +5,79 @@
 import Foundation
 import SwiftSly
 
-final class TRLexer: Lexer {
-    enum TokenTypes: String, Tokenizable {
-        case DIGIT, CHAR
-    }
+/// Grammer Rules
+/// ```
+/// S -> S TOKEN
+/// S -> TOKEN
+/// TOKEN -> [ : CLASSNAME : ]
+/// TOKEN -> CHAR - CHAR
+/// TOKEN -> CHAR
+///
+/// CHAR -> a | .... | z | A | ... | Z | 0 | ... | 9
+/// CLASSNAME -> alnum | alpha | blank | cntrl | digit | lower | print | punct | rune | space | special | upper
+///
 
-    static var literals: [String] = ["-", ":", "[", "]"]
-    
+final class TRLexer: Lexer {
+    enum TokenTypes: String, Tokenizable { case CHAR, CLASSNAME }
+    static var literals = ["-", ":", "[", "]"]
     static var tokenRules: [TokenRegex<TokenTypes>] = [
-        TokenRegex(.DIGIT, pattern: "digit"),
-        TokenRegex(.CHAR,  pattern: "[A-Za-z0-9]")
+        TokenRegex(.CLASSNAME, pattern: "(alnum|alpha|blank|cntrl|digit|lower|print|punct|rune|space|special|upper)"),
+        TokenRegex(.CHAR     , pattern: "[A-Za-z0-9]")
     ]
 }
 
-/***
- ```
- S -> S RANGE | ε
-
- RANGE -> [ : CLASSNAME : ] | CHAR CONT
-
- CONT -> - CHAR | ε
-
- CHAR -> a | b | c | d | e | f | g | h | i | j | k | l |
-  m | n | o | p | q | r | s | t | u | v | w | x | y | z |
-   A | B | C | D | E | F | G | H | I | J | K | L | M |
-   N | O | P | Q | R | S | T | U | V | W | X | Y | Z |
-   0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-
- CLASSNAME -> alnum | alpha | blank | cntrl | digit |
- lower |print | punct | rune | space | special | upper
- ```
- */
-
-class TRParser: CCParser<TRLexer> {
-    func parseExpression() throws -> any AbstractSyntaxTree {
-        let range = try parseRange()
-        
-        // ε check
-        guard tokensAvailable else {
-            return range
+final class TRParser: Parser {
+    typealias Output = [Character]
+    typealias TokenTypes = TRLexer.TokenTypes
+    static var rules: [Rule<TRParser>] = [
+        Rule("S -> S TOKEN") { p in
+            p[0].nonTermValue! + p[1].nonTermValue!
+        },
+        Rule("S -> TOKEN") { p in
+            p[0].nonTermValue!
+        },
+        Rule("TOKEN -> [ : CLASSNAME : ]") { p in
+            switch p[2].termValue! {
+            case "alnum": upper + lower + digit
+            case "alpha": upper + lower
+            case "blank": [" ", "\t"]
+            case "cntrl": Chars(0, 31) + [Char(127)]
+            case "digit": digit
+            case "lower": lower
+            case "print": Chars(32, 126)
+            case "punct": Chars(33, 47) + Chars(58, 64) + Chars(91, 96) + Chars(123, 126)
+            case "rune" : Chars(32, 127)
+            case "space": Chars(9, 13) + [Char(32)]
+            case "special": ["!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",",
+                             "-", ".", "/", ":", ";", "<", "=", ">", "?", "@", "[", "\\",
+                             "]", "^", "_", "{", "|", "}", "~"]
+            case "upper": upper
+            default: []
+            }
+        },
+        Rule("TOKEN -> CHAR - CHAR") { p in
+            Chars(from: p[0].termValue!, to: p[2].termValue!)
+        },
+        Rule("TOKEN -> CHAR") { p in
+            [Character(p[0].termValue!)]
         }
-        
-        return JoinOpNode(lhs: range, rhs: try parseExpression())
+    ]
+    
+    private static var upper = Chars(from: "A", to: "Z")
+    private static var lower = Chars(from: "a", to: "z")
+    private static var digit = Chars(from: "0", to: "9")
+    private static func Chars(from startString: String, to endString: String) -> [Character] {
+        return Chars(Int(startString.first!.asciiValue!), Int(endString.first!.asciiValue!))
     }
-    
-    func parseRange() throws -> any AbstractSyntaxTree {
-        let char = try parseCharacter()
-        return try parseCont(lhs: char)
+    private static func Chars(_ start: Int, _ end: Int) -> [Character] {
+        (start...end).map{Char($0)}
     }
-    
-    func parseCont(lhs: CharacterNode) throws -> any AbstractSyntaxTree {
-        // ε check
-        guard tokensAvailable else {
-            return lhs
-        }
-        
-        // case TRLexer.Types.Literal("-") =
-        guard popCurrentToken() == Token("-") else {
-            throw ParseError.UnexpectedToken
-        }
-
-        
-        let rhs = try parseCharacter()
-        return RangeOpNode(lhs: lhs, rhs: rhs)
-    }
-    
-    func parseCharacter() throws -> CharacterNode {
-        // case let TRLexer.Token.Character(name) =
-        let char = popCurrentToken()
-        guard char.name == "CHAR" else {
-            throw ParseError.ExpectedCharacter
-        }
-        return CharacterNode(name: Character(char.value))
-    }
-    
-    override func parse() throws -> any AbstractSyntaxTree {
-        index = 0
-        return try parseExpression()
-    }
-    
-}
-
-enum ParseError: Error {
-    case UnexpectedToken
-    case ExpectedCharacter
-}
-
-public struct CharacterNode: AbstractSyntaxTree, Equatable {
-    public let name: Character
-    
-    public func generate() -> [Character] {
-        [name]
-    }
-    
-    public var description: String {
-        return "CharacterNode(\(name))"
+    private static func Char(_ uint32: Int) -> Character {
+        Character(UnicodeScalar(uint32)!)
     }
 }
 
-public struct RangeOpNode: AbstractSyntaxTree, Equatable {
-    public let lhs: CharacterNode
-    public let rhs: CharacterNode
-    
-    public func generate() -> [Character] {
-        guard let start = lhs.generate().first?.unicodeScalars.first?.value else {
-            return []
-        }
-        
-        guard let end = rhs.generate().first?.unicodeScalars.first?.value else {
-            return []
-        }
-        
-        var returnVal: [Character] = []
-        for uint32 in start...end {
-            returnVal.append(Character(UnicodeScalar(uint32)!))
-        }
-        
-        return returnVal
-    }
-    
-    public var description: String {
-        return "RangeOpNode(lhs: \(lhs), rhs: \(rhs))"
-    }
-}
 
-public struct JoinOpNode: AbstractSyntaxTree, Equatable {
-    public let lhs: any AbstractSyntaxTree
-    public let rhs: any AbstractSyntaxTree
-    
-    public func generate() -> [Character] {
-        var returnVal = lhs.generate() as! [Character]
-        returnVal.append(contentsOf: rhs.generate() as! [Character])
-        return returnVal
-    }
-    
-    public var description: String {
-        return "JoinOpNode(lhs: \(lhs), rhs: \(rhs))"
-    }
-    
-    public static func == (myself: JoinOpNode, other: JoinOpNode) -> Bool {
-        myself.lhs.isEqual(to: other.lhs) && myself.rhs.isEqual(to: other.rhs)
-    }
-}
 
 
 

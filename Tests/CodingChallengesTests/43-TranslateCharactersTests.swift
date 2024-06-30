@@ -4,65 +4,71 @@ import SwiftSly
 
 final class TranslateCharactersTests: XCTestCase {
     let lexer = TRLexer()
+    let parser = TRParser()
     
-    func testTRLexer() throws {
-        let result = try lexer.tokenize("A-Z")
-        let expected: [Token<TRLexer.TokenTypes>] = [
-            Token(.CHAR, value: "A"),
-            Token("-"),
-            Token(.CHAR, value: "Z")
-        ]
-        XCTAssertEqual(expected, result)
+    func testLexerRange() throws {
+        let expected: [Token<TRLexer.TokenTypes>] = [Token(.CHAR, value: "A"), Token("-"), Token(.CHAR, value: "Z")]
+        let tokens = try lexer.tokenize("A-Z")
+        XCTAssertEqual(expected, tokens)
     }
     
-    func testClassnameLexer() throws {
-        let result = try lexer.tokenize("[:digit:]")
+    func testLexerChars() throws {
+        let expected: [Token<TRLexer.TokenTypes>] = [Token(.CHAR, value: "A"), Token(.CHAR, value: "Z")]
+        let tokens = try lexer.tokenize("AZ")
+        XCTAssertEqual(expected, tokens)
+    }
+    
+    func testSingleChar() throws {
+        let tokens = try lexer.tokenize("a")
+        XCTAssertEqual([Token(.CHAR, value: "a")], tokens)
+    }
+    
+    func testClassname() throws {
         let expected: [Token<TRLexer.TokenTypes>] = [
             Token("["),
             Token(":"),
-            Token(.DIGIT, value: "digit"),
+            Token(.CLASSNAME, value: "digit"),
             Token(":"),
             Token("]")
         ]
-        XCTAssertEqual(expected, result)
+        let tokens = try lexer.tokenize("[:digit:]")
+        XCTAssertEqual(expected, tokens)
     }
     
-    func testSingleCharacterParser() throws {
-        let ast = try getAST("k")
-        let expected = CharacterNode(name: "k")
-        XCTAssertEqual(expected, ast as! CharacterNode)
+    func testGrammarLexerRange() throws {
+        let expected: [Character] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                                     "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                                     "W", "X", "Y", "Z"]
+        let parsed = try parser.parse(tokens: lexer.tokenize("A-Z"))
+        XCTAssertEqual(expected, parsed)
     }
     
-    func testRangeParser() throws {
-        let ast = try getAST("A-Z")
-        let expected = RangeOpNode(lhs: CharacterNode(name: "A"), rhs: CharacterNode(name: "Z"))
-        XCTAssertEqual(expected, ast as! RangeOpNode)
+    func testGrammarLexerChar() throws {
+        let parsed = try parser.parse(tokens: lexer.tokenize("AZ"))
+        XCTAssertEqual(["A", "Z"], parsed)
     }
     
-    func testJoinParser() throws {
-        let ast = try getAST("A-Z0-9")
-        let lhs = RangeOpNode(lhs: CharacterNode(name: "A"), rhs: CharacterNode(name: "Z"))
-        let rhs = RangeOpNode(lhs: CharacterNode(name: "0"), rhs: CharacterNode(name: "9"))
-        let expected = JoinOpNode(lhs: lhs, rhs: rhs)
-        XCTAssertEqual(expected, ast as! JoinOpNode)
+    func testSingleCharParser() throws {
+        let parsed = try parser.parse(tokens: lexer.tokenize("a"))
+        XCTAssertEqual(["a"], parsed)
     }
     
-    func testThreeJoinParser() throws {
-        let ast = try getAST("a-zA-Z0-9")
-        let lhs1 = RangeOpNode(lhs: CharacterNode(name: "a"), rhs: CharacterNode(name: "z"))
-        let lhs2 = RangeOpNode(lhs: CharacterNode(name: "A"), rhs: CharacterNode(name: "Z"))
-        let rhs = RangeOpNode(lhs: CharacterNode(name: "0"), rhs: CharacterNode(name: "9"))
-        let expected = JoinOpNode(lhs: lhs1, rhs: JoinOpNode(lhs: lhs2, rhs: rhs))
-        XCTAssertEqual(expected, ast as! JoinOpNode)
+    func testGrammarLexerDigit() throws {
+        let expected: [Character] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        let parsed = try parser.parse(tokens: lexer.tokenize("[:digit:]"))
+        XCTAssertEqual(expected, parsed)
     }
     
-    func testCharacterParser() throws {
-        let expected: [Character] = ["a", "b", "c", "d", "e", "f", "0", "1", "2", "3", "4", "5"]
-        let ast = try getAST("a-f0-5")
-        XCTAssertEqual(expected, ast.generate() as! [Character])
+    func testGrammarLexerDigitPlusRange() throws {
+        let expected: [Character] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d"]
+        let parsed = try parser.parse(tokens: lexer.tokenize("[:digit:]a-d"))
+        XCTAssertEqual(expected, parsed)
     }
     
-    func getAST(_ input: String) throws -> any AbstractSyntaxTree {
-        return try TRParser(tokens: lexer.tokenize(input)).parse()
+    func testGrammarLexerTwoClasses() throws {
+        let expected: [Character] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", " ", "\t"]
+        let tokens = try lexer.tokenize("[:digit:][:blank:]")
+        let parsed = try parser.parse(tokens: tokens)
+        XCTAssertEqual(expected, parsed)
     }
 }
