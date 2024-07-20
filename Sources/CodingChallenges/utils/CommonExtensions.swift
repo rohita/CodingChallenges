@@ -27,6 +27,10 @@ extension String {
     func strip() -> String {
         self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+    
+    func strip(_ chars: String) -> String {
+        self.trimmingCharacters(in: CharacterSet(charactersIn: chars))
+    }
 }
 
 

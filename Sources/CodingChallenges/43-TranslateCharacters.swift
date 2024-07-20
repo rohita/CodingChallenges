@@ -31,13 +31,13 @@ final class TRParser: Parser {
     typealias TokenTypes = TRLexer.TokenTypes
     static var rules: [Rule<TRParser>] = [
         Rule("S -> S TOKEN") { p in
-            p[0].nonTermValue! + p[1].nonTermValue!
+            p[0].nonTermValue + p[1].nonTermValue
         },
         Rule("S -> TOKEN") { p in
-            p[0].nonTermValue!
+            p[0].nonTermValue
         },
         Rule("TOKEN -> [ : CLASSNAME : ]") { p in
-            switch p[2].termValue! {
+            switch p[2].termValue {
             case "alnum": upper + lower + digit
             case "alpha": upper + lower
             case "blank": [" ", "\t"]
@@ -56,10 +56,10 @@ final class TRParser: Parser {
             }
         },
         Rule("TOKEN -> CHAR - CHAR") { p in
-            Chars(from: p[0].termValue!, to: p[2].termValue!)
+            Chars(from: p[0].termValue, to: p[2].termValue)
         },
         Rule("TOKEN -> CHAR") { p in
-            [Character(p[0].termValue!)]
+            [Character(p[0].termValue)]
         }
     ]
     
