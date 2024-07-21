@@ -1,4 +1,8 @@
-//  https://codingchallenges.substack.com/p/coding-challenge-2
+/// ## Problem
+/// https://codingchallenges.substack.com/p/coding-challenge-2
+/// 
+/// ## References
+/// https://gist.github.com/hadware/5dc39e407b78900a1f9e71b52ebf3a36
 
 import Foundation
 import SwiftSly

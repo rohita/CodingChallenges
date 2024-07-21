@@ -1,6 +1,6 @@
-//
-//  https://codingchallenges.substack.com/p/coding-challenge-1
-//
+/// ## Problem
+/// https://codingchallenges.substack.com/p/coding-challenge-1
+///
 
 import Foundation
 

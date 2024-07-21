@@ -1,6 +1,6 @@
-// 
-// https://codingchallenges.substack.com/p/coding-challenge-27-rate-limiter
-//
+/// ## Problem
+/// https://codingchallenges.substack.com/p/coding-challenge-27-rate-limiter
+///
 
 import Foundation
 

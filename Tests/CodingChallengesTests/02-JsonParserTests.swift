@@ -1,5 +1,4 @@
 import XCTest
-import SwiftSly
 @testable import CodingChallenges
 
 final class JsonParserTests: XCTestCase {

@@ -1,6 +1,6 @@
-//
-//  https://codingchallenges.substack.com/p/coding-challenge-43-tr
-//
+/// ## Problem
+/// https://codingchallenges.substack.com/p/coding-challenge-43-tr
+///
 
 import Foundation
 import SwiftSly
